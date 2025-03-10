@@ -1,5 +1,5 @@
 /**
- * LLMチャットアプリのフロントエンド機能を実装するJavaScriptファイル
+ * ollama簡易クライアントのフロントエンド機能を実装するJavaScriptファイル
  */
 
 // Socket.IOの接続を確立
@@ -11,9 +11,11 @@ const chatContainer = document.getElementById('chat-container');
 const settingsContainer = document.getElementById('settings-container');
 const modelManagerContainer = document.getElementById('model-manager-container');
 const modelList = document.getElementById('model-list');
+const modelRunningInfo = document.getElementById('model-running-info');
 const modelStatus = document.getElementById('model-status');
 const currentModelName = document.getElementById('current-model-name');
 const changeModelBtn = document.getElementById('change-model-btn');
+const backToChatBtn = document.getElementById('back-to-chat-btn');
 const modelManagerBtn = document.getElementById('model-manager-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
@@ -86,12 +88,27 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function fetchModels() {
     try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
+        // モデル一覧と起動中のモデルを並行して取得
+        const [modelsResponse, runningModelsResponse] = await Promise.all([
+            fetch('/api/models'),
+            fetch('/api/running_models')
+        ]);
         
-        if (data.models && data.models.length > 0) {
-            displayModels(data.models);
+        const modelsData = await modelsResponse.json();
+        const runningModelsData = await runningModelsResponse.json();
+        
+        // 起動中のモデルを表示
+        displayRunningModelsInSelection(runningModelsData.models || []);
+        
+        // 利用可能なモデル一覧を表示
+        if (modelsData.models && modelsData.models.length > 0) {
+            displayModels(modelsData.models, runningModelsData.models || []);
             modelStatus.textContent = 'モデルを選択してください';
+            
+            // チャットが開始されている場合は「戻る」ボタンを表示
+            if (currentModel) {
+                backToChatBtn.style.display = 'inline-block';
+            }
         } else {
             modelList.innerHTML = `
                 <div class="model-error">
@@ -111,6 +128,42 @@ async function fetchModels() {
         `;
         modelStatus.textContent = 'サーバーに接続できません';
     }
+}
+
+/**
+ * モデル選択画面に起動中のモデルを表示する関数
+ *
+ * @param {Array} models - 起動中のモデル情報の配列
+ */
+function displayRunningModelsInSelection(models) {
+    if (!models || models.length === 0) {
+        modelRunningInfo.style.display = 'none';
+        return;
+    }
+    
+    modelRunningInfo.style.display = 'block';
+    modelRunningInfo.innerHTML = `
+        <div class="model-running-info-title">起動中のモデル</div>
+    `;
+    
+    models.forEach(model => {
+        const modelItem = document.createElement('div');
+        modelItem.classList.add('running-model-item');
+        
+        modelItem.innerHTML = `
+            <div class="running-model-info">
+                <div class="running-model-name">${model.model}</div>
+                <div class="running-model-id">ID: ${model.id}</div>
+            </div>
+            <button class="kill-model-btn" data-id="${model.id}">終了</button>
+        `;
+        
+        modelRunningInfo.appendChild(modelItem);
+        
+        // 終了ボタンのイベントリスナー
+        const killBtn = modelItem.querySelector('.kill-model-btn');
+        killBtn.addEventListener('click', () => killModel(model.id));
+    });
 }
 
 /**
@@ -291,23 +344,35 @@ function stopSidebarUpdates() {
  * モデル一覧を表示する関数
  *
  * @param {Array} models - モデル情報の配列
+ * @param {Array} runningModels - 起動中のモデル情報の配列
  */
-function displayModels(models) {
+function displayModels(models, runningModels = []) {
     modelList.innerHTML = '';
+    
+    // 起動中のモデル名のセット
+    const runningModelNames = new Set(runningModels.map(m => m.model));
     
     models.forEach(model => {
         const modelCard = document.createElement('div');
         modelCard.classList.add('model-card');
+        
+        // 現在選択中または起動中のモデルの場合はクラスを追加
+        if (model.name === currentModel) {
+            modelCard.classList.add('selected');
+        }
+        
+        // 起動中のモデルかどうかを確認
+        const isRunning = runningModelNames.has(model.name);
         
         // モデルサイズをフォーマット
         const sizeInGB = model.size ? (model.size / (1024 * 1024 * 1024)).toFixed(2) + ' GB' : '不明';
         
         modelCard.innerHTML = `
             <div class="model-info">
-                <div class="model-name">${model.name}</div>
+                <div class="model-name">${model.name} ${isRunning ? '<span class="running-badge">起動中</span>' : ''}</div>
                 <div class="model-details">サイズ: ${sizeInGB}</div>
             </div>
-            <button class="model-select-btn" data-model="${model.name}">選択</button>
+            <button class="model-select-btn" data-model="${model.name}">${isRunning ? '使用' : '選択'}</button>
         `;
         
         modelList.appendChild(modelCard);
@@ -617,6 +682,17 @@ function setupEventListeners() {
         stopSidebarUpdates();
     });
     
+    // チャットに戻るボタンのイベントリスナー
+    backToChatBtn.addEventListener('click', () => {
+        if (currentModel) {
+            modelSelection.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            
+            // サイドバーの定期更新を開始
+            startSidebarUpdates();
+        }
+    });
+    
     // モデル管理ボタンのイベントリスナー
     modelManagerBtn.addEventListener('click', () => {
         modelManagerContainer.style.display = 'flex';
@@ -704,7 +780,12 @@ function setupEventListeners() {
         if (!message) return;
         
         // メッセージをUIに追加
-        addMessageToUI('user', message);
+        const messageElement = addMessageToUI('user', message);
+        
+        // ユーザーのメッセージが画面の一番上に来るようにスクロール
+        if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         
         // 処理中状態に設定
         isProcessing = true;
@@ -734,9 +815,9 @@ function setupEventListeners() {
             currentMessageDiv.classList.add('message');
             currentMessageDiv.classList.add('assistant-message');
             
-            // 送信者名を設定
+            // 送信者名を設定（現在のモデル名を使用）
             currentMessageDiv.innerHTML = `
-                <div class="message-sender">アシスタント</div>
+                <div class="message-sender">${currentModel || 'モデル'}</div>
                 <div class="message-content"></div>
             `;
             
@@ -752,7 +833,7 @@ function setupEventListeners() {
         messageContent.innerHTML = escapeHtml(currentAssistantMessage);
         
         // 最新のメッセージが見えるようにスクロール
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        scrollToBottom();
     });
     
     // サーバーからのメッセージ受信イベントのリスナー
@@ -803,6 +884,7 @@ function setupEventListeners() {
  *
  * @param {string} sender - メッセージの送信者（'user'または'assistant'または'system'）
  * @param {string} message - メッセージの内容
+ * @returns {HTMLElement} 追加されたメッセージ要素
  */
 function addMessageToUI(sender, message) {
     // メッセージ要素の作成
@@ -815,7 +897,7 @@ function addMessageToUI(sender, message) {
     if (sender === 'user') {
         senderName = 'あなた';
     } else if (sender === 'assistant') {
-        senderName = 'アシスタント';
+        senderName = currentModel || 'モデル';
     }
     
     // メッセージの内容を設定
@@ -828,22 +910,107 @@ function addMessageToUI(sender, message) {
     chatMessages.appendChild(div);
     
     // 最新のメッセージが見えるようにスクロール
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    scrollToBottom();
+    
+    // 追加したメッセージ要素を返す
+    return div;
 }
 
 /**
- * HTMLエスケープを行う関数
+ * チャットメッセージ領域を最下部にスクロールする関数
+ */
+function scrollToBottom() {
+    // スムーズにスクロール
+    chatMessages.scrollTo({
+        top: chatMessages.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+/**
+ * HTMLエスケープを行い、改行とコードブロックを処理する関数
  *
  * @param {string} unsafe - エスケープする文字列
  * @returns {string} エスケープされた文字列
  */
 function escapeHtml(unsafe) {
-    return unsafe
+    if (!unsafe) return '';
+    
+    // HTMLエスケープ
+    let escaped = unsafe
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    
+    // コードブロックを検出して処理
+    escaped = processCodeBlocks(escaped);
+    
+    // 改行を<br>タグに変換（コードブロック内は除く）
+    escaped = escaped.replace(/\n(?!<\/code>|<code>)/g, "<br>");
+    
+    return escaped;
+}
+
+/**
+ * コードブロックを処理する関数
+ *
+ * @param {string} text - 処理するテキスト
+ * @returns {string} コードブロックが処理されたテキスト
+ */
+function processCodeBlocks(text) {
+    // コードブロックのパターン: ```言語名\nコード\n```
+    const codeBlockRegex = /```(\w*)\n([\s\S]*?)\n```/g;
+    
+    return text.replace(codeBlockRegex, function(match, language, code) {
+        // 言語名が指定されていない場合は「code」とする
+        const langClass = language ? `language-${language}` : 'language-code';
+        
+        // コードブロックのHTMLを生成
+        return `
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-language">${language || 'コード'}</span>
+                    <button class="copy-code-btn" onclick="copyCode(this)">コピー</button>
+                </div>
+                <pre><code class="${langClass}">${code}</code></pre>
+            </div>
+        `;
+    });
+}
+
+/**
+ * コードをクリップボードにコピーする関数
+ *
+ * @param {HTMLElement} button - コピーボタン要素
+ */
+function copyCode(button) {
+    const codeBlock = button.closest('.code-block');
+    const codeElement = codeBlock.querySelector('code');
+    const code = codeElement.textContent;
+    
+    // クリップボードにコピー
+    navigator.clipboard.writeText(code).then(() => {
+        // コピー成功時の表示
+        const originalText = button.textContent;
+        button.textContent = 'コピー完了!';
+        button.classList.add('copied');
+        
+        // 2秒後に元のテキストに戻す
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('コピーに失敗しました:', err);
+        button.textContent = 'コピー失敗';
+        
+        // 2秒後に元のテキストに戻す
+        setTimeout(() => {
+            button.textContent = 'コピー';
+        }, 2000);
+    });
 }
 
 /**

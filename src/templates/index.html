@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLMチャットアプリ</title>
+    <title>ollama簡易クライアント</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
@@ -12,8 +12,12 @@
         <!-- モデル選択画面 -->
         <div class="model-selection-container" id="model-selection">
             <div class="model-selection-header">
-                <h1>LLMチャットアプリ</h1>
+                <h1>ollama簡易クライアント</h1>
                 <p>使用するモデルを選択してください</p>
+            </div>
+            
+            <div class="model-running-info" id="model-running-info">
+                <!-- 起動中のモデル情報がここに表示されます -->
             </div>
             
             <div class="model-list" id="model-list">
@@ -26,13 +30,14 @@
             
             <div class="model-selection-footer">
                 <p class="model-status" id="model-status">ollamaサーバーに接続中...</p>
+                <button id="back-to-chat-btn" class="back-to-chat-btn" style="display: none;">チャットに戻る</button>
             </div>
         </div>
         
         <!-- チャット画面 -->
         <div class="chat-container" id="chat-container" style="display: none;">
             <header class="chat-header">
-                <h1>LLMチャットアプリ</h1>
+                <h1>ollama簡易クライアント</h1>
                 <div class="model-info">
                     <span class="model-name" id="current-model-name">モデル未選択</span>
                     <button id="change-model-btn" class="change-model-btn">モデル変更</button>
