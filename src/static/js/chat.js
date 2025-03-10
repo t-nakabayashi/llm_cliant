@@ -73,7 +73,7 @@ const defaultParams = {
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
-    // モデル一覧を取得
+    // モデル一覧を取得（バックグラウンドで）
     fetchModels();
     
     // モデルパラメータを取得
@@ -81,6 +81,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // イベントリスナーの設定
     setupEventListeners();
+    
+    // 初期画面をチャット画面に設定
+    modelSelection.style.display = 'none';
+    chatContainer.style.display = 'flex';
+    
+    // 初期メッセージを表示
+    chatMessages.innerHTML = `
+        <div class="message system-message">
+            <div class="message-content">
+                こんにちは！「モデル変更」ボタンからモデルを選択してチャットを開始できます。
+            </div>
+        </div>
+    `;
 });
 
 /**
@@ -680,6 +693,18 @@ function setupEventListeners() {
         
         // サイドバーの定期更新を停止
         stopSidebarUpdates();
+    });
+    
+    // モデル選択画面を閉じるボタンのイベントリスナー
+    const closeModelSelectionBtn = document.getElementById('close-model-selection-btn');
+    closeModelSelectionBtn.addEventListener('click', () => {
+        modelSelection.style.display = 'none';
+        chatContainer.style.display = 'flex';
+        
+        // サイドバーの定期更新を開始（モデルが選択されている場合）
+        if (currentModel) {
+            startSidebarUpdates();
+        }
     });
     
     // チャットに戻るボタンのイベントリスナー

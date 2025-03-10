@@ -86,8 +86,16 @@ body {
 }
 
 .model-selection-header {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+    position: relative;
+}
+
+.model-selection-header h1, .model-selection-header p {
+    text-align: center;
+    flex: 1;
 }
 
 .model-selection-header h1 {
