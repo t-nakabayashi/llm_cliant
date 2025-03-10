@@ -45,7 +45,6 @@ const topKSlider = document.getElementById('top-k');
 const topKValue = document.getElementById('top-k-value');
 const contextLengthSlider = document.getElementById('context-length');
 const contextLengthValue = document.getElementById('context-length-value');
-const vramUsageValue = document.getElementById('vram-usage-value');
 const repeatPenaltySlider = document.getElementById('repeat-penalty');
 const repeatPenaltyValue = document.getElementById('repeat-penalty-value');
 const resetSettingsBtn = document.getElementById('reset-settings-btn');
@@ -53,7 +52,6 @@ const saveSettingsBtn = document.getElementById('save-settings-btn');
 
 // アプリケーションの状態
 let currentModel = null;
-let currentModelSize = 0; // モデルサイズ（バイト単位）
 let isProcessing = false;
 let modelParams = {
     temperature: 0.7,
@@ -588,14 +586,8 @@ async function selectModel(modelName) {
             if (data.model_info) {
                 console.log('モデル情報:', data.model_info);
                 
-                // モデルサイズを保存（利用可能な場合）
-                const models = await (await fetch('/api/models')).json();
-                const selectedModel = models.models.find(m => m.name === modelName);
-                if (selectedModel && selectedModel.size) {
-                    currentModelSize = selectedModel.size;
-                    // VRAM使用量の表示を更新
-                    updateVramUsage(modelParams.context_length);
-                }
+                // モデル情報のログ出力のみ
+                console.log('モデル情報:', data.model_info);
             }
             
             // 接続状態を更新
@@ -691,106 +683,9 @@ function updateSettingsUI() {
     
     repeatPenaltySlider.value = modelParams.repeat_penalty;
     repeatPenaltyValue.textContent = modelParams.repeat_penalty;
-    
-    // VRAM使用量を更新
-    updateVramUsage(modelParams.context_length);
 }
 
-/**
- * VRAM使用量を計算して表示する関数
- *
- * @param {number} contextLength - コンテキスト長
- */
-function updateVramUsage(contextLength) {
-    if (!currentModelSize) {
-        vramUsageValue.textContent = '不明（モデルを選択してください）';
-        return;
-    }
-    
-    // モデルサイズからモデルのアーキテクチャを推測
-    const modelArchitecture = estimateModelArchitecture(currentModelSize);
-    
-    // モデルサイズとコンテキスト長からVRAM使用量を推定（改良版）
-    const baseModelSizeGB = currentModelSize / (1024 * 1024 * 1024);
-    
-    // KVキャッシュサイズの計算
-    // KVキャッシュは、コンテキスト長 × レイヤー数 × 隠れ層の次元数 × 2 に比例
-    const layerCount = modelArchitecture.layers;
-    const hiddenSize = modelArchitecture.hiddenSize;
-    const bytesPerToken = modelArchitecture.bytesPerToken;
-    
-    // KVキャッシュサイズ（GB）
-    const kvCacheSizeGB = (contextLength * layerCount * hiddenSize * 2 * 4) / (1024 * 1024 * 1024);
-    
-    // アクティベーションサイズ（GB）- 推論時は通常小さい
-    const activationSizeGB = (hiddenSize * 4) / (1024 * 1024 * 1024);
-    
-    // 合計VRAM使用量（オーバーヘッドを考慮して10%増し）
-    const totalVramGB = (baseModelSizeGB + kvCacheSizeGB + activationSizeGB) * 1.1;
-    
-    // VRAM使用率の計算（GPUのVRAMが16GBと仮定）
-    const assumedGpuVramGB = 16;
-    const vramUsagePercent = (totalVramGB / assumedGpuVramGB) * 100;
-    
-    // 表示を更新
-    vramUsageValue.textContent = `約 ${totalVramGB.toFixed(2)} GB (${vramUsagePercent.toFixed(1)}%)`;
-    
-    // VRAM使用率に応じて色を変更
-    if (vramUsagePercent > 90) {
-        vramUsageValue.style.color = '#e74c3c'; // 赤色（危険）
-    } else if (vramUsagePercent > 70) {
-        vramUsageValue.style.color = '#f39c12'; // オレンジ色（警告）
-    } else {
-        vramUsageValue.style.color = '#2ecc71'; // 緑色（安全）
-    }
-}
-
-/**
- * モデルサイズからモデルのアーキテクチャを推測する関数
- *
- * @param {number} modelSizeBytes - モデルサイズ（バイト）
- * @returns {Object} モデルアーキテクチャの推定値
- */
-function estimateModelArchitecture(modelSizeBytes) {
-    // モデルサイズ（GB）
-    const modelSizeGB = modelSizeBytes / (1024 * 1024 * 1024);
-    
-    // モデルサイズに基づいてアーキテクチャを推定
-    let layers, hiddenSize, bytesPerToken;
-    
-    if (modelSizeGB < 2) {
-        // 小型モデル（1B以下）
-        layers = 24;
-        hiddenSize = 1024;
-        bytesPerToken = 8;
-    } else if (modelSizeGB < 5) {
-        // 中型モデル（3B程度）
-        layers = 32;
-        hiddenSize = 2048;
-        bytesPerToken = 10;
-    } else if (modelSizeGB < 10) {
-        // 大型モデル（7B程度）
-        layers = 32;
-        hiddenSize = 4096;
-        bytesPerToken = 12;
-    } else if (modelSizeGB < 20) {
-        // 超大型モデル（13B程度）
-        layers = 40;
-        hiddenSize = 5120;
-        bytesPerToken = 14;
-    } else {
-        // 巨大モデル（30B以上）
-        layers = 60;
-        hiddenSize = 6656;
-        bytesPerToken = 16;
-    }
-    
-    return {
-        layers,
-        hiddenSize,
-        bytesPerToken
-    };
-}
+// VRAM使用量関連の関数は削除
 
 /**
  * イベントリスナーを設定する関数
@@ -897,9 +792,6 @@ function setupEventListeners() {
         const value = parseInt(contextLengthSlider.value);
         contextLengthValue.textContent = value;
         modelParams.context_length = value;
-        
-        // VRAM使用量を計算して表示
-        updateVramUsage(value);
     });
     
     repeatPenaltySlider.addEventListener('input', () => {

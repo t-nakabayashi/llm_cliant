@@ -261,17 +261,12 @@ def main():
     if os.environ.get("PYTEST_CURRENT_TEST") is None:
         host = os.environ.get("HOST", "127.0.0.1")
         port = int(os.environ.get("PORT", 5000))
-        debug = os.environ.get("DEBUG", "True").lower() == "true"
+        debug = os.environ.get("DEBUG", "False").lower() == "true"
 
-        # 起動時にモデル一覧を表示
-        try:
-            models = ollama_client.list_models()
-            if models:
-                print(f"利用可能なモデル: {', '.join([m.get('name', 'unknown') for m in models])}")
-            else:
-                print("利用可能なモデルがありません。ollamaサーバーが起動しているか確認してください。")
-        except Exception as e:
-            print(f"モデル一覧の取得に失敗しました: {e}")
+        # 起動メッセージ
+        print(f"ollama簡易クライアントを起動しています...")
+        print(f"サーバーアドレス: http://{host}:{port}")
+        print(f"ollamaサーバー: {ollama_host}")
 
         socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
 

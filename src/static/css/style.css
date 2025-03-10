@@ -705,17 +705,6 @@ body {
     margin-top: 5px;
 }
 
-.vram-usage {
-    font-size: 0.9rem;
-    color: #4a69bd;
-    margin-top: 8px;
-    font-weight: bold;
-    background-color: #f0f4ff;
-    padding: 5px 10px;
-    border-radius: 4px;
-    border-left: 3px solid #4a69bd;
-}
-
 .settings-actions {
     display: flex;
     justify-content: flex-end;
