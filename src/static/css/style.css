@@ -187,7 +187,7 @@ body {
     font-weight: bold;
 }
 
-.change-model-btn, .settings-btn {
+.change-model-btn, .settings-btn, .model-manager-btn {
     padding: 5px 10px;
     background-color: rgba(255, 255, 255, 0.2);
     color: #fff;
@@ -198,7 +198,7 @@ body {
     transition: background-color 0.2s;
 }
 
-.change-model-btn:hover, .settings-btn:hover {
+.change-model-btn:hover, .settings-btn:hover, .model-manager-btn:hover {
     background-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -454,6 +454,182 @@ body {
     background-color: #3c5aa6;
 }
 
+/* モデル管理画面 */
+.model-manager-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 700px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.model-manager-header {
+    background-color: #4a69bd;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.model-manager-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.model-manager-content {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.model-manager-section {
+    margin-bottom: 25px;
+}
+
+.model-manager-section h3 {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.running-models {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100px;
+}
+
+.running-model-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.running-model-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.running-model-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.running-model-id {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.kill-model-btn {
+    padding: 8px 15px;
+    background-color: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.kill-model-btn:hover {
+    background-color: #c0392b;
+}
+
+.gpu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-height: 100px;
+}
+
+.gpu-card {
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.gpu-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.gpu-name {
+    font-weight: bold;
+    color: #333;
+}
+
+.gpu-utilization {
+    font-weight: bold;
+    color: #4a69bd;
+}
+
+.gpu-memory {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.gpu-progress-bar {
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.gpu-progress {
+    height: 100%;
+    background-color: #4a69bd;
+    border-radius: 5px;
+}
+
+.model-manager-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.model-manager-actions button {
+    padding: 8px 15px;
+    background-color: #4a69bd;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.model-manager-actions button:hover {
+    background-color: #3c5aa6;
+}
+
+.no-models-message, .no-gpu-message {
+    text-align: center;
+    color: #6c757d;
+    padding: 20px;
+}
+
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
     .chat-container, .model-selection-container {
@@ -477,7 +653,7 @@ body {
         justify-content: space-between;
     }
     
-    .settings-container {
+    .settings-container, .model-manager-container {
         width: 95%;
         max-height: 95vh;
     }

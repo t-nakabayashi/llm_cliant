@@ -11,6 +11,8 @@ import os
 import json
 import requests
 import re
+import subprocess
+import platform
 from typing import Dict, List, Any, Optional, Callable, Iterator
 
 # テスト中にollamaパッケージがなくてもインポートできるようにする
@@ -141,6 +143,228 @@ class OllamaClient:
             except Exception as e:
                 print(f"コマンドラインからのモデル一覧取得に失敗しました: {e}")
                 return []
+
+    def list_running_models(self) -> List[Dict[str, Any]]:
+        """
+        現在起動中のモデルの一覧を取得します。
+
+        Returns:
+            List[Dict[str, Any]]: 起動中のモデル情報のリスト
+        """
+        try:
+            # 直接HTTPリクエストを送信
+            url = f"{self.host}/api/ps"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+            # レスポンスの形式を確認
+            if "processes" in data:
+                return data["processes"]
+            elif isinstance(data, list):
+                return data
+            else:
+                print(f"未知のHTTP APIレスポンス形式: {type(data)}")
+                return []
+        except Exception as e:
+            print(f"起動中のモデル一覧の取得に失敗しました: {e}")
+
+            # 最後の手段として、コマンドラインの出力から起動中のモデル一覧を取得
+            try:
+                result = subprocess.run(["ollama", "ps"], capture_output=True, text=True)
+                output = result.stdout
+                print(f"ollama ps コマンド出力: {output}")
+
+                # 出力を解析して起動中のモデル一覧を取得
+                models = []
+                lines = output.strip().split("\n")
+                if len(lines) > 1:  # ヘッダー行をスキップ
+                    for line in lines[1:]:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            model_id = parts[0]
+                            model_name = parts[1]
+                            models.append({"id": model_id, "model": model_name})
+                return models
+            except Exception as e:
+                print(f"コマンドラインからの起動中のモデル一覧取得に失敗しました: {e}")
+                return []
+
+    def kill_model(self, model_id: str) -> bool:
+        """
+        指定したモデルを終了します。
+
+        Args:
+            model_id: 終了するモデルのID
+
+        Returns:
+            bool: 終了に成功した場合はTrue、失敗した場合はFalse
+        """
+        try:
+            # 直接HTTPリクエストを送信
+            url = f"{self.host}/api/kill"
+            payload = {"id": model_id}
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"モデルの終了に失敗しました: {e}")
+
+            # 最後の手段として、コマンドラインでモデルを終了
+            try:
+                result = subprocess.run(["ollama", "kill", model_id], capture_output=True, text=True)
+                if result.returncode == 0:
+                    return True
+                else:
+                    print(f"コマンドラインでのモデル終了に失敗しました: {result.stderr}")
+                    return False
+            except Exception as e:
+                print(f"コマンドラインでのモデル終了に失敗しました: {e}")
+                return False
+
+    def get_gpu_info(self) -> List[Dict[str, Any]]:
+        """
+        GPUの情報と使用率を取得します。
+
+        Returns:
+            List[Dict[str, Any]]: GPU情報のリスト
+        """
+        try:
+            # OSに応じてGPU情報を取得
+            system = platform.system()
+
+            if system == "Windows":
+                # Windowsの場合はnvidia-smiを使用
+                result = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode != 0:
+                    print(f"nvidia-smiの実行に失敗しました: {result.stderr}")
+                    return []
+
+                # 出力を解析してGPU情報を取得
+                gpus = []
+                lines = result.stdout.strip().split("\n")
+                for line in lines:
+                    parts = line.split(", ")
+                    if len(parts) >= 5:
+                        gpu_index = parts[0]
+                        gpu_name = parts[1]
+                        gpu_util = float(parts[2])
+                        gpu_mem_used = float(parts[3])
+                        gpu_mem_total = float(parts[4])
+
+                        gpus.append(
+                            {
+                                "index": gpu_index,
+                                "name": gpu_name,
+                                "utilization": gpu_util,
+                                "memory_used": gpu_mem_used,
+                                "memory_total": gpu_mem_total,
+                                "memory_used_percent": (gpu_mem_used / gpu_mem_total) * 100 if gpu_mem_total > 0 else 0,
+                            }
+                        )
+
+                return gpus
+
+            elif system == "Linux":
+                # Linuxの場合もnvidia-smiを使用
+                result = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode != 0:
+                    print(f"nvidia-smiの実行に失敗しました: {result.stderr}")
+                    return []
+
+                # 出力を解析してGPU情報を取得
+                gpus = []
+                lines = result.stdout.strip().split("\n")
+                for line in lines:
+                    parts = line.split(", ")
+                    if len(parts) >= 5:
+                        gpu_index = parts[0]
+                        gpu_name = parts[1]
+                        gpu_util = float(parts[2])
+                        gpu_mem_used = float(parts[3])
+                        gpu_mem_total = float(parts[4])
+
+                        gpus.append(
+                            {
+                                "index": gpu_index,
+                                "name": gpu_name,
+                                "utilization": gpu_util,
+                                "memory_used": gpu_mem_used,
+                                "memory_total": gpu_mem_total,
+                                "memory_used_percent": (gpu_mem_used / gpu_mem_total) * 100 if gpu_mem_total > 0 else 0,
+                            }
+                        )
+
+                return gpus
+
+            elif system == "Darwin":
+                # macOSの場合はMPSツールを使用（Apple Silicon用）
+                # 注意: これはApple Silicon搭載のMacでのみ動作します
+                try:
+                    # まず、ioregを使用してGPUの名前を取得
+                    result = subprocess.run(["ioreg", "-l", "-w", "0"], capture_output=True, text=True)
+
+                    gpu_name = "Apple GPU"
+                    for line in result.stdout.split("\n"):
+                        if "model" in line.lower() and "gpu" in line.lower():
+                            match = re.search(r'"model"\s*=\s*"([^"]+)"', line)
+                            if match:
+                                gpu_name = match.group(1)
+                                break
+
+                    # powermetrics を使用してGPUの使用率を取得
+                    # 注意: これには管理者権限が必要な場合があります
+                    result = subprocess.run(
+                        ["sudo", "powermetrics", "--samplers", "gpu", "-n", "1", "-i", "100"], capture_output=True, text=True
+                    )
+
+                    gpu_util = 0
+                    for line in result.stdout.split("\n"):
+                        if "gpu active" in line.lower():
+                            match = re.search(r"(\d+)%", line)
+                            if match:
+                                gpu_util = float(match.group(1))
+                                break
+
+                    return [
+                        {
+                            "index": "0",
+                            "name": gpu_name,
+                            "utilization": gpu_util,
+                            "memory_used": 0,  # Apple GPUではメモリ使用量を取得できない
+                            "memory_total": 0,
+                            "memory_used_percent": 0,
+                        }
+                    ]
+                except Exception as e:
+                    print(f"macOSでのGPU情報取得に失敗しました: {e}")
+                    return []
+
+            else:
+                print(f"未対応のOS: {system}")
+                return []
+
+        except Exception as e:
+            print(f"GPU情報の取得に失敗しました: {e}")
+            return []
 
     def chat_stream(
         self,

@@ -9,12 +9,18 @@ const socket = io();
 const modelSelection = document.getElementById('model-selection');
 const chatContainer = document.getElementById('chat-container');
 const settingsContainer = document.getElementById('settings-container');
+const modelManagerContainer = document.getElementById('model-manager-container');
 const modelList = document.getElementById('model-list');
 const modelStatus = document.getElementById('model-status');
 const currentModelName = document.getElementById('current-model-name');
 const changeModelBtn = document.getElementById('change-model-btn');
+const modelManagerBtn = document.getElementById('model-manager-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
+const closeModelManagerBtn = document.getElementById('close-model-manager-btn');
+const refreshModelManagerBtn = document.getElementById('refresh-model-manager-btn');
+const runningModels = document.getElementById('running-models');
+const gpuInfo = document.getElementById('gpu-info');
 const chatForm = document.getElementById('chat-form');
 const messageInput = document.getElementById('message-input');
 const chatMessages = document.getElementById('chat-messages');
@@ -118,6 +124,88 @@ async function fetchModelParams() {
 }
 
 /**
+ * 起動中のモデル一覧を取得する関数
+ */
+async function fetchRunningModels() {
+    try {
+        const response = await fetch('/api/running_models');
+        const data = await response.json();
+        
+        if (data.models) {
+            displayRunningModels(data.models);
+        } else {
+            runningModels.innerHTML = `
+                <div class="no-models-message">
+                    <p>起動中のモデルがありません。</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('起動中のモデル一覧の取得に失敗しました:', error);
+        runningModels.innerHTML = `
+            <div class="model-error">
+                <p>起動中のモデル一覧の取得に失敗しました。ollamaサーバーが起動しているか確認してください。</p>
+                <button onclick="refreshModelManager()" class="model-select-btn">再試行</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * GPU情報を取得する関数
+ */
+async function fetchGpuInfo() {
+    try {
+        const response = await fetch('/api/gpu_info');
+        const data = await response.json();
+        
+        if (data.gpus && data.gpus.length > 0) {
+            displayGpuInfo(data.gpus);
+        } else {
+            gpuInfo.innerHTML = `
+                <div class="no-gpu-message">
+                    <p>GPU情報を取得できませんでした。GPUが搭載されていないか、ドライバが正しくインストールされていない可能性があります。</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('GPU情報の取得に失敗しました:', error);
+        gpuInfo.innerHTML = `
+            <div class="model-error">
+                <p>GPU情報の取得に失敗しました。</p>
+                <button onclick="refreshModelManager()" class="model-select-btn">再試行</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * モデル管理画面を更新する関数
+ */
+async function refreshModelManager() {
+    // ローディング表示
+    runningModels.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>モデルを読み込み中...</p>
+        </div>
+    `;
+    
+    gpuInfo.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>GPU情報を読み込み中...</p>
+        </div>
+    `;
+    
+    // 起動中のモデルとGPU情報を取得
+    await Promise.all([
+        fetchRunningModels(),
+        fetchGpuInfo()
+    ]);
+}
+
+/**
  * モデル一覧を表示する関数
  *
  * @param {Array} models - モデル情報の配列
@@ -145,6 +233,84 @@ function displayModels(models) {
         // 選択ボタンのイベントリスナー
         const selectBtn = modelCard.querySelector('.model-select-btn');
         selectBtn.addEventListener('click', () => selectModel(model.name));
+    });
+}
+
+/**
+ * 起動中のモデル一覧を表示する関数
+ *
+ * @param {Array} models - 起動中のモデル情報の配列
+ */
+function displayRunningModels(models) {
+    if (models.length === 0) {
+        runningModels.innerHTML = `
+            <div class="no-models-message">
+                <p>起動中のモデルがありません。</p>
+            </div>
+        `;
+        return;
+    }
+    
+    runningModels.innerHTML = '';
+    
+    models.forEach(model => {
+        const modelCard = document.createElement('div');
+        modelCard.classList.add('running-model-card');
+        
+        modelCard.innerHTML = `
+            <div class="running-model-info">
+                <div class="running-model-name">${model.model}</div>
+                <div class="running-model-id">ID: ${model.id}</div>
+            </div>
+            <button class="kill-model-btn" data-id="${model.id}">終了</button>
+        `;
+        
+        runningModels.appendChild(modelCard);
+        
+        // 終了ボタンのイベントリスナー
+        const killBtn = modelCard.querySelector('.kill-model-btn');
+        killBtn.addEventListener('click', () => killModel(model.id));
+    });
+}
+
+/**
+ * GPU情報を表示する関数
+ *
+ * @param {Array} gpus - GPU情報の配列
+ */
+function displayGpuInfo(gpus) {
+    if (gpus.length === 0) {
+        gpuInfo.innerHTML = `
+            <div class="no-gpu-message">
+                <p>GPU情報を取得できませんでした。GPUが搭載されていないか、ドライバが正しくインストールされていない可能性があります。</p>
+            </div>
+        `;
+        return;
+    }
+    
+    gpuInfo.innerHTML = '';
+    
+    gpus.forEach(gpu => {
+        const gpuCard = document.createElement('div');
+        gpuCard.classList.add('gpu-card');
+        
+        // メモリ使用量をフォーマット
+        const memUsed = gpu.memory_used ? `${gpu.memory_used.toFixed(0)} MB` : '不明';
+        const memTotal = gpu.memory_total ? `${gpu.memory_total.toFixed(0)} MB` : '不明';
+        const memPercent = gpu.memory_used_percent ? gpu.memory_used_percent.toFixed(1) : 0;
+        
+        gpuCard.innerHTML = `
+            <div class="gpu-header">
+                <div class="gpu-name">${gpu.name} (GPU ${gpu.index})</div>
+                <div class="gpu-utilization">${gpu.utilization.toFixed(1)}%</div>
+            </div>
+            <div class="gpu-memory">メモリ使用量: ${memUsed} / ${memTotal} (${memPercent}%)</div>
+            <div class="gpu-progress-bar">
+                <div class="gpu-progress" style="width: ${gpu.utilization}%"></div>
+            </div>
+        `;
+        
+        gpuInfo.appendChild(gpuCard);
     });
 }
 
@@ -197,6 +363,39 @@ async function selectModel(modelName) {
     } catch (error) {
         console.error('モデルの選択に失敗しました:', error);
         modelStatus.textContent = 'モデルの選択に失敗しました';
+    }
+}
+
+/**
+ * モデルを終了する関数
+ *
+ * @param {string} modelId - 終了するモデルのID
+ */
+async function killModel(modelId) {
+    try {
+        const response = await fetch('/api/kill_model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: modelId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // モデル管理画面を更新
+            refreshModelManager();
+            
+            // 成功メッセージを表示
+            addMessageToUI('system', `モデル(ID: ${modelId})を終了しました。`);
+        } else {
+            console.error('モデルの終了に失敗しました');
+            addMessageToUI('system', `モデルの終了に失敗しました: ${data.error || 'エラーが発生しました'}`);
+        }
+    } catch (error) {
+        console.error('モデルの終了に失敗しました:', error);
+        addMessageToUI('system', `モデルの終了に失敗しました: ${error.message}`);
     }
 }
 
@@ -257,6 +456,22 @@ function setupEventListeners() {
         chatContainer.style.display = 'none';
         modelSelection.style.display = 'flex';
         fetchModels();
+    });
+    
+    // モデル管理ボタンのイベントリスナー
+    modelManagerBtn.addEventListener('click', () => {
+        modelManagerContainer.style.display = 'flex';
+        refreshModelManager();
+    });
+    
+    // モデル管理を閉じるボタンのイベントリスナー
+    closeModelManagerBtn.addEventListener('click', () => {
+        modelManagerContainer.style.display = 'none';
+    });
+    
+    // モデル管理を更新するボタンのイベントリスナー
+    refreshModelManagerBtn.addEventListener('click', () => {
+        refreshModelManager();
     });
     
     // 設定ボタンのイベントリスナー

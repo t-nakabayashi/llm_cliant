@@ -191,3 +191,180 @@ def test_get_model_info_error(mock_ollama, ollama_client):
     # 検証
     assert result == {}
     mock_ollama.show.assert_called_once_with("unknown-model")
+
+
+@patch("src.ollama_client.requests.get")
+def test_list_running_models_success(mock_get, ollama_client):
+    """
+    list_running_modelsメソッドが成功した場合のテスト。
+
+    Args:
+        mock_get: requestsのgetメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {
+        "processes": [{"id": "abc123", "model": "llama2"}, {"id": "def456", "model": "mistral"}]
+    }
+    mock_get.return_value = mock_response
+
+    # テスト実行
+    result = ollama_client.list_running_models()
+
+    # 検証
+    assert len(result) == 2
+    assert result[0]["id"] == "abc123"
+    assert result[0]["model"] == "llama2"
+    assert result[1]["id"] == "def456"
+    assert result[1]["model"] == "mistral"
+    mock_get.assert_called_once_with("http://localhost:11434/api/ps")
+
+
+@patch("src.ollama_client.requests.get")
+def test_list_running_models_error(mock_get, ollama_client):
+    """
+    list_running_modelsメソッドがエラーを発生させた場合のテスト。
+
+    Args:
+        mock_get: requestsのgetメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_get.side_effect = Exception("Connection error")
+
+    # テスト実行
+    result = ollama_client.list_running_models()
+
+    # 検証
+    assert result == []
+    mock_get.assert_called_once_with("http://localhost:11434/api/ps")
+
+
+@patch("src.ollama_client.requests.post")
+def test_kill_model_success(mock_post, ollama_client):
+    """
+    kill_modelメソッドが成功した場合のテスト。
+
+    Args:
+        mock_post: requestsのpostメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_post.return_value = mock_response
+
+    # テスト実行
+    result = ollama_client.kill_model("abc123")
+
+    # 検証
+    assert result is True
+    mock_post.assert_called_once_with("http://localhost:11434/api/kill", json={"id": "abc123"})
+
+
+@patch("src.ollama_client.requests.post")
+def test_kill_model_error(mock_post, ollama_client):
+    """
+    kill_modelメソッドがエラーを発生させた場合のテスト。
+
+    Args:
+        mock_post: requestsのpostメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_post.side_effect = Exception("Connection error")
+
+    # テスト実行
+    result = ollama_client.kill_model("abc123")
+
+    # 検証
+    assert result is False
+    mock_post.assert_called_once_with("http://localhost:11434/api/kill", json={"id": "abc123"})
+
+
+@patch("src.ollama_client.platform.system")
+@patch("src.ollama_client.subprocess.run")
+def test_get_gpu_info_windows(mock_run, mock_system, ollama_client):
+    """
+    get_gpu_infoメソッドがWindows環境で成功した場合のテスト。
+
+    Args:
+        mock_run: subprocessのrunメソッドのモック
+        mock_system: platformのsystemメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_system.return_value = "Windows"
+    mock_process = MagicMock()
+    mock_process.returncode = 0
+    mock_process.stdout = "0, NVIDIA GeForce RTX 3080, 50, 5000, 10000"
+    mock_run.return_value = mock_process
+
+    # テスト実行
+    result = ollama_client.get_gpu_info()
+
+    # 検証
+    assert len(result) == 1
+    assert result[0]["index"] == "0"
+    assert result[0]["name"] == "NVIDIA GeForce RTX 3080"
+    assert result[0]["utilization"] == 50.0
+    assert result[0]["memory_used"] == 5000.0
+    assert result[0]["memory_total"] == 10000.0
+    assert result[0]["memory_used_percent"] == 50.0
+    mock_system.assert_called_once()
+    mock_run.assert_called_once()
+
+
+@patch("src.ollama_client.platform.system")
+@patch("src.ollama_client.subprocess.run")
+def test_get_gpu_info_linux(mock_run, mock_system, ollama_client):
+    """
+    get_gpu_infoメソッドがLinux環境で成功した場合のテスト。
+
+    Args:
+        mock_run: subprocessのrunメソッドのモック
+        mock_system: platformのsystemメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_system.return_value = "Linux"
+    mock_process = MagicMock()
+    mock_process.returncode = 0
+    mock_process.stdout = "0, NVIDIA GeForce RTX 3080, 50, 5000, 10000"
+    mock_run.return_value = mock_process
+
+    # テスト実行
+    result = ollama_client.get_gpu_info()
+
+    # 検証
+    assert len(result) == 1
+    assert result[0]["index"] == "0"
+    assert result[0]["name"] == "NVIDIA GeForce RTX 3080"
+    assert result[0]["utilization"] == 50.0
+    assert result[0]["memory_used"] == 5000.0
+    assert result[0]["memory_total"] == 10000.0
+    assert result[0]["memory_used_percent"] == 50.0
+    mock_system.assert_called_once()
+    mock_run.assert_called_once()
+
+
+@patch("src.ollama_client.platform.system")
+def test_get_gpu_info_unsupported_os(mock_system, ollama_client):
+    """
+    get_gpu_infoメソッドが未対応のOS環境で呼び出された場合のテスト。
+
+    Args:
+        mock_system: platformのsystemメソッドのモック
+        ollama_client: OllamaClientインスタンス
+    """
+    # モックの設定
+    mock_system.return_value = "Unsupported OS"
+
+    # テスト実行
+    result = ollama_client.get_gpu_info()
+
+    # 検証
+    assert result == []
+    mock_system.assert_called_once()

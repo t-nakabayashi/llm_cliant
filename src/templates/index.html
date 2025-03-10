@@ -36,6 +36,7 @@
                 <div class="model-info">
                     <span class="model-name" id="current-model-name">モデル未選択</span>
                     <button id="change-model-btn" class="change-model-btn">モデル変更</button>
+                    <button id="model-manager-btn" class="model-manager-btn">モデル管理</button>
                     <button id="settings-btn" class="settings-btn">設定</button>
                 </div>
                 <div class="status-indicator">
@@ -133,6 +134,42 @@
                 <div class="settings-actions">
                     <button id="reset-settings-btn">デフォルトに戻す</button>
                     <button id="save-settings-btn">保存</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- モデル管理画面 -->
+        <div class="model-manager-container" id="model-manager-container" style="display: none;">
+            <div class="model-manager-header">
+                <h2>モデル管理</h2>
+                <button id="close-model-manager-btn" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="model-manager-content">
+                <div class="model-manager-section">
+                    <h3>起動中のモデル</h3>
+                    <div class="running-models" id="running-models">
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                            <p>モデルを読み込み中...</p>
+                        </div>
+                        <!-- 起動中のモデルリストがここに表示されます -->
+                    </div>
+                </div>
+                
+                <div class="model-manager-section">
+                    <h3>GPU使用率</h3>
+                    <div class="gpu-info" id="gpu-info">
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                            <p>GPU情報を読み込み中...</p>
+                        </div>
+                        <!-- GPU情報がここに表示されます -->
+                    </div>
+                </div>
+                
+                <div class="model-manager-actions">
+                    <button id="refresh-model-manager-btn">更新</button>
                 </div>
             </div>
         </div>

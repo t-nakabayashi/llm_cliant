@@ -57,6 +57,124 @@ def test_get_models_route(mock_list_models, client):
     mock_list_models.assert_called_once()
 
 
+@patch("src.app.ollama_client.list_running_models")
+def test_get_running_models_route(mock_list_running_models, client):
+    """
+    起動中のモデル一覧取得ルートのテスト。
+
+    Args:
+        mock_list_running_models: ollama_client.list_running_modelsのモック
+        client: テスト用のFlaskクライアント
+    """
+    # モックの設定
+    mock_models = [{"id": "abc123", "model": "llama2"}, {"id": "def456", "model": "mistral"}]
+    mock_list_running_models.return_value = mock_models
+
+    # テスト実行
+    response = client.get("/api/running_models")
+
+    # 検証
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert "models" in data
+    assert data["models"] == mock_models
+    mock_list_running_models.assert_called_once()
+
+
+@patch("src.app.ollama_client.kill_model")
+def test_kill_model_route_success(mock_kill_model, client):
+    """
+    モデル終了ルートの成功テスト。
+
+    Args:
+        mock_kill_model: ollama_client.kill_modelのモック
+        client: テスト用のFlaskクライアント
+    """
+    # モックの設定
+    mock_kill_model.return_value = True
+
+    # テスト実行
+    response = client.post("/api/kill_model", data=json.dumps({"id": "abc123"}), content_type="application/json")
+
+    # 検証
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["success"] is True
+    mock_kill_model.assert_called_once_with("abc123")
+
+
+@patch("src.app.ollama_client.kill_model")
+def test_kill_model_route_failure(mock_kill_model, client):
+    """
+    モデル終了ルートの失敗テスト。
+
+    Args:
+        mock_kill_model: ollama_client.kill_modelのモック
+        client: テスト用のFlaskクライアント
+    """
+    # モックの設定
+    mock_kill_model.return_value = False
+
+    # テスト実行
+    response = client.post("/api/kill_model", data=json.dumps({"id": "abc123"}), content_type="application/json")
+
+    # 検証
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["success"] is False
+    mock_kill_model.assert_called_once_with("abc123")
+
+
+def test_kill_model_route_no_id(client):
+    """
+    モデル終了ルートの失敗テスト（モデルIDなし）。
+
+    Args:
+        client: テスト用のFlaskクライアント
+    """
+    # テスト実行
+    response = client.post("/api/kill_model", data=json.dumps({}), content_type="application/json")
+
+    # 検証
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert data["success"] is False
+    assert "error" in data
+
+
+@patch("src.app.ollama_client.get_gpu_info")
+def test_get_gpu_info_route(mock_get_gpu_info, client):
+    """
+    GPU情報取得ルートのテスト。
+
+    Args:
+        mock_get_gpu_info: ollama_client.get_gpu_infoのモック
+        client: テスト用のFlaskクライアント
+    """
+    # モックの設定
+    mock_gpus = [
+        {
+            "index": "0",
+            "name": "NVIDIA GeForce RTX 3080",
+            "utilization": 50.0,
+            "memory_used": 5000.0,
+            "memory_total": 10000.0,
+            "memory_used_percent": 50.0,
+        }
+    ]
+    mock_get_gpu_info.return_value = mock_gpus
+
+    # テスト実行
+    response = client.get("/api/gpu_info")
+
+    # 検証
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert "gpus" in data
+    assert data["gpus"] == mock_gpus
+    mock_get_gpu_info.assert_called_once()
+
+
 @patch("src.app.ollama_client.get_model_info")
 def test_select_model_route_success(mock_get_model_info, client):
     """

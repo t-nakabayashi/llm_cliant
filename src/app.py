@@ -55,6 +55,48 @@ def get_models():
     return jsonify({"models": models})
 
 
+@app.route("/api/running_models")
+def get_running_models():
+    """
+    現在起動中のモデルの一覧を取得します。
+
+    Returns:
+        Response: 起動中のモデル情報のJSONレスポンス
+    """
+    models = ollama_client.list_running_models()
+    return jsonify({"models": models})
+
+
+@app.route("/api/kill_model", methods=["POST"])
+def kill_model():
+    """
+    指定したモデルを終了します。
+
+    Returns:
+        Response: 終了結果のJSONレスポンス
+    """
+    data = request.json
+    model_id = data.get("id")
+
+    if not model_id:
+        return jsonify({"success": False, "error": "モデルIDが指定されていません"}), 400
+
+    success = ollama_client.kill_model(model_id)
+    return jsonify({"success": success})
+
+
+@app.route("/api/gpu_info")
+def get_gpu_info():
+    """
+    GPUの情報と使用率を取得します。
+
+    Returns:
+        Response: GPU情報のJSONレスポンス
+    """
+    gpu_info = ollama_client.get_gpu_info()
+    return jsonify({"gpus": gpu_info})
+
+
 @app.route("/api/select_model", methods=["POST"])
 def select_model():
     """
