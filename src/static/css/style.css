@@ -142,6 +142,30 @@ body {
     margin-bottom: 10px;
 }
 
+/* 小さいローディングスピナー */
+.loading-spinner-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+}
+
+.spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4a69bd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 5px;
+}
+
+.loading-spinner-small p {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -150,7 +174,7 @@ body {
 /* チャットコンテナ */
 .chat-container {
     width: 100%;
-    max-width: 800px;
+    max-width: 1100px;
     height: 90vh;
     background-color: #fff;
     border-radius: 10px;
@@ -230,6 +254,13 @@ body {
     font-size: 0.9rem;
 }
 
+/* チャットとサイドバーのレイアウト */
+.chat-with-sidebar {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
 /* チャットメイン */
 .chat-main {
     flex: 1;
@@ -240,6 +271,92 @@ body {
 .chat-messages {
     display: flex;
     flex-direction: column;
+}
+
+/* サイドバー */
+.chat-sidebar {
+    width: 300px;
+    background-color: #f8f9fa;
+    border-left: 1px solid #e9ecef;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.sidebar-section {
+    margin-bottom: 20px;
+}
+
+.sidebar-section h3 {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* サイドバー内のモデル情報 */
+.sidebar-running-model {
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.sidebar-running-model-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.sidebar-running-model-id {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* サイドバー内のGPU情報 */
+.sidebar-gpu {
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.sidebar-gpu-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.sidebar-gpu-name {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.sidebar-gpu-utilization {
+    font-weight: bold;
+    color: #4a69bd;
+    font-size: 0.9rem;
+}
+
+.sidebar-gpu-memory {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.sidebar-gpu-progress-bar {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sidebar-gpu-progress {
+    height: 100%;
+    background-color: #4a69bd;
+    border-radius: 4px;
 }
 
 /* メッセージスタイル */
@@ -631,6 +748,19 @@ body {
 }
 
 /* レスポンシブデザイン */
+@media (max-width: 1100px) {
+    .chat-with-sidebar {
+        flex-direction: column;
+    }
+    
+    .chat-sidebar {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #e9ecef;
+        max-height: 300px;
+    }
+}
+
 @media (max-width: 768px) {
     .chat-container, .model-selection-container {
         height: 100vh;

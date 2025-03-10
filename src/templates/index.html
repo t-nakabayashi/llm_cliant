@@ -45,16 +45,41 @@
                 </div>
             </header>
             
-            <main class="chat-main">
-                <div class="chat-messages" id="chat-messages">
-                    <!-- チャットメッセージがここに表示されます -->
-                    <div class="message system-message">
-                        <div class="message-content">
-                            こんにちは！メッセージを入力してください。
+            <div class="chat-with-sidebar">
+                <main class="chat-main">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- チャットメッセージがここに表示されます -->
+                        <div class="message system-message">
+                            <div class="message-content">
+                                こんにちは！メッセージを入力してください。
+                            </div>
                         </div>
                     </div>
-                </div>
-            </main>
+                </main>
+                
+                <!-- サイドバー -->
+                <aside class="chat-sidebar">
+                    <div class="sidebar-section">
+                        <h3>起動中のモデル</h3>
+                        <div id="sidebar-running-models">
+                            <div class="loading-spinner-small">
+                                <div class="spinner-small"></div>
+                                <p>読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-section">
+                        <h3>GPU使用率</h3>
+                        <div id="sidebar-gpu-info">
+                            <div class="loading-spinner-small">
+                                <div class="spinner-small"></div>
+                                <p>読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
             
             <footer class="chat-footer">
                 <form id="chat-form">

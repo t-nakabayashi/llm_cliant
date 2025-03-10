@@ -28,6 +28,10 @@ const sendButton = document.getElementById('send-button');
 const statusText = document.getElementById('status-text');
 const statusDot = document.querySelector('.status-dot');
 
+// サイドバー要素
+const sidebarRunningModels = document.getElementById('sidebar-running-models');
+const sidebarGpuInfo = document.getElementById('sidebar-gpu-info');
+
 // 設定関連の要素
 const temperatureSlider = document.getElementById('temperature');
 const temperatureValue = document.getElementById('temperature-value');
@@ -52,6 +56,9 @@ let modelParams = {
     context_length: 4096,
     repeat_penalty: 1.1
 };
+
+// サイドバー更新用のタイマーID
+let sidebarUpdateTimerId = null;
 
 // デフォルトのパラメータ設定
 const defaultParams = {
@@ -133,8 +140,14 @@ async function fetchRunningModels() {
         
         if (data.models) {
             displayRunningModels(data.models);
+            displaySidebarRunningModels(data.models);
         } else {
             runningModels.innerHTML = `
+                <div class="no-models-message">
+                    <p>起動中のモデルがありません。</p>
+                </div>
+            `;
+            sidebarRunningModels.innerHTML = `
                 <div class="no-models-message">
                     <p>起動中のモデルがありません。</p>
                 </div>
@@ -146,6 +159,11 @@ async function fetchRunningModels() {
             <div class="model-error">
                 <p>起動中のモデル一覧の取得に失敗しました。ollamaサーバーが起動しているか確認してください。</p>
                 <button onclick="refreshModelManager()" class="model-select-btn">再試行</button>
+            </div>
+        `;
+        sidebarRunningModels.innerHTML = `
+            <div class="model-error">
+                <p>起動中のモデル一覧の取得に失敗しました。</p>
             </div>
         `;
     }
@@ -161,10 +179,16 @@ async function fetchGpuInfo() {
         
         if (data.gpus && data.gpus.length > 0) {
             displayGpuInfo(data.gpus);
+            displaySidebarGpuInfo(data.gpus);
         } else {
             gpuInfo.innerHTML = `
                 <div class="no-gpu-message">
                     <p>GPU情報を取得できませんでした。GPUが搭載されていないか、ドライバが正しくインストールされていない可能性があります。</p>
+                </div>
+            `;
+            sidebarGpuInfo.innerHTML = `
+                <div class="no-gpu-message">
+                    <p>GPU情報を取得できませんでした。</p>
                 </div>
             `;
         }
@@ -174,6 +198,11 @@ async function fetchGpuInfo() {
             <div class="model-error">
                 <p>GPU情報の取得に失敗しました。</p>
                 <button onclick="refreshModelManager()" class="model-select-btn">再試行</button>
+            </div>
+        `;
+        sidebarGpuInfo.innerHTML = `
+            <div class="model-error">
+                <p>GPU情報の取得に失敗しました。</p>
             </div>
         `;
     }
@@ -203,6 +232,46 @@ async function refreshModelManager() {
         fetchRunningModels(),
         fetchGpuInfo()
     ]);
+}
+
+/**
+ * サイドバーの情報を更新する関数
+ */
+async function updateSidebarInfo() {
+    try {
+        await Promise.all([
+            fetchRunningModels(),
+            fetchGpuInfo()
+        ]);
+    } catch (error) {
+        console.error('サイドバー情報の更新に失敗しました:', error);
+    }
+}
+
+/**
+ * サイドバーの定期更新を開始する関数
+ */
+function startSidebarUpdates() {
+    // 既存のタイマーがあれば停止
+    if (sidebarUpdateTimerId) {
+        clearInterval(sidebarUpdateTimerId);
+    }
+    
+    // 初回更新
+    updateSidebarInfo();
+    
+    // 1秒おきに更新
+    sidebarUpdateTimerId = setInterval(updateSidebarInfo, 1000);
+}
+
+/**
+ * サイドバーの定期更新を停止する関数
+ */
+function stopSidebarUpdates() {
+    if (sidebarUpdateTimerId) {
+        clearInterval(sidebarUpdateTimerId);
+        sidebarUpdateTimerId = null;
+    }
 }
 
 /**
@@ -274,6 +343,36 @@ function displayRunningModels(models) {
 }
 
 /**
+ * サイドバーに起動中のモデル一覧を表示する関数
+ *
+ * @param {Array} models - 起動中のモデル情報の配列
+ */
+function displaySidebarRunningModels(models) {
+    if (models.length === 0) {
+        sidebarRunningModels.innerHTML = `
+            <div class="no-models-message">
+                <p>起動中のモデルがありません。</p>
+            </div>
+        `;
+        return;
+    }
+    
+    sidebarRunningModels.innerHTML = '';
+    
+    models.forEach(model => {
+        const modelCard = document.createElement('div');
+        modelCard.classList.add('sidebar-running-model');
+        
+        modelCard.innerHTML = `
+            <div class="sidebar-running-model-name">${model.model}</div>
+            <div class="sidebar-running-model-id">ID: ${model.id}</div>
+        `;
+        
+        sidebarRunningModels.appendChild(modelCard);
+    });
+}
+
+/**
  * GPU情報を表示する関数
  *
  * @param {Array} gpus - GPU情報の配列
@@ -311,6 +410,47 @@ function displayGpuInfo(gpus) {
         `;
         
         gpuInfo.appendChild(gpuCard);
+    });
+}
+
+/**
+ * サイドバーにGPU情報を表示する関数
+ *
+ * @param {Array} gpus - GPU情報の配列
+ */
+function displaySidebarGpuInfo(gpus) {
+    if (gpus.length === 0) {
+        sidebarGpuInfo.innerHTML = `
+            <div class="no-gpu-message">
+                <p>GPU情報を取得できませんでした。</p>
+            </div>
+        `;
+        return;
+    }
+    
+    sidebarGpuInfo.innerHTML = '';
+    
+    gpus.forEach(gpu => {
+        const gpuCard = document.createElement('div');
+        gpuCard.classList.add('sidebar-gpu');
+        
+        // メモリ使用量をフォーマット
+        const memUsed = gpu.memory_used ? `${gpu.memory_used.toFixed(0)} MB` : '不明';
+        const memTotal = gpu.memory_total ? `${gpu.memory_total.toFixed(0)} MB` : '不明';
+        const memPercent = gpu.memory_used_percent ? gpu.memory_used_percent.toFixed(1) : 0;
+        
+        gpuCard.innerHTML = `
+            <div class="sidebar-gpu-header">
+                <div class="sidebar-gpu-name">${gpu.name}</div>
+                <div class="sidebar-gpu-utilization">${gpu.utilization.toFixed(1)}%</div>
+            </div>
+            <div class="sidebar-gpu-memory">${memUsed} / ${memTotal} (${memPercent}%)</div>
+            <div class="sidebar-gpu-progress-bar">
+                <div class="sidebar-gpu-progress" style="width: ${gpu.utilization}%"></div>
+            </div>
+        `;
+        
+        sidebarGpuInfo.appendChild(gpuCard);
     });
 }
 
@@ -357,6 +497,9 @@ async function selectModel(modelName) {
             
             // 接続状態を更新
             updateConnectionStatus('ready');
+            
+            // サイドバーの定期更新を開始
+            startSidebarUpdates();
         } else {
             modelStatus.textContent = `エラー: ${data.error || 'モデルの選択に失敗しました'}`;
         }
@@ -456,6 +599,9 @@ function setupEventListeners() {
         chatContainer.style.display = 'none';
         modelSelection.style.display = 'flex';
         fetchModels();
+        
+        // サイドバーの定期更新を停止
+        stopSidebarUpdates();
     });
     
     // モデル管理ボタンのイベントリスナー
@@ -628,6 +774,14 @@ function setupEventListeners() {
     // 切断イベントのリスナー
     socket.on('disconnect', () => {
         updateConnectionStatus('disconnected');
+        
+        // サイドバーの定期更新を停止
+        stopSidebarUpdates();
+    });
+    
+    // ページを離れる前にサイドバーの定期更新を停止
+    window.addEventListener('beforeunload', () => {
+        stopSidebarUpdates();
     });
 }
 
