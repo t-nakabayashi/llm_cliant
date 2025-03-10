@@ -138,9 +138,10 @@ async function fetchRunningModels() {
         const response = await fetch('/api/running_models');
         const data = await response.json();
         
-        if (data.models) {
+        if (data.models && data.models.length > 0) {
             displayRunningModels(data.models);
             displaySidebarRunningModels(data.models);
+            return true;
         } else {
             runningModels.innerHTML = `
                 <div class="no-models-message">
@@ -152,6 +153,7 @@ async function fetchRunningModels() {
                     <p>起動中のモデルがありません。</p>
                 </div>
             `;
+            return false;
         }
     } catch (error) {
         console.error('起動中のモデル一覧の取得に失敗しました:', error);
@@ -166,6 +168,7 @@ async function fetchRunningModels() {
                 <p>起動中のモデル一覧の取得に失敗しました。</p>
             </div>
         `;
+        return false;
     }
 }
 
@@ -180,6 +183,7 @@ async function fetchGpuInfo() {
         if (data.gpus && data.gpus.length > 0) {
             displayGpuInfo(data.gpus);
             displaySidebarGpuInfo(data.gpus);
+            return true;
         } else {
             gpuInfo.innerHTML = `
                 <div class="no-gpu-message">
@@ -191,6 +195,7 @@ async function fetchGpuInfo() {
                     <p>GPU情報を取得できませんでした。</p>
                 </div>
             `;
+            return false;
         }
     } catch (error) {
         console.error('GPU情報の取得に失敗しました:', error);
@@ -205,6 +210,7 @@ async function fetchGpuInfo() {
                 <p>GPU情報の取得に失敗しました。</p>
             </div>
         `;
+        return false;
     }
 }
 
@@ -239,10 +245,17 @@ async function refreshModelManager() {
  */
 async function updateSidebarInfo() {
     try {
-        await Promise.all([
+        // 起動中のモデルとGPU情報を取得
+        const [modelsResult, gpuResult] = await Promise.all([
             fetchRunningModels(),
             fetchGpuInfo()
         ]);
+        
+        // どちらも失敗した場合は更新を停止
+        if (!modelsResult && !gpuResult) {
+            console.warn('サイドバー情報の更新に失敗しました。更新を停止します。');
+            stopSidebarUpdates();
+        }
     } catch (error) {
         console.error('サイドバー情報の更新に失敗しました:', error);
     }
@@ -311,7 +324,7 @@ function displayModels(models) {
  * @param {Array} models - 起動中のモデル情報の配列
  */
 function displayRunningModels(models) {
-    if (models.length === 0) {
+    if (!models || models.length === 0) {
         runningModels.innerHTML = `
             <div class="no-models-message">
                 <p>起動中のモデルがありません。</p>
@@ -348,7 +361,7 @@ function displayRunningModels(models) {
  * @param {Array} models - 起動中のモデル情報の配列
  */
 function displaySidebarRunningModels(models) {
-    if (models.length === 0) {
+    if (!models || models.length === 0) {
         sidebarRunningModels.innerHTML = `
             <div class="no-models-message">
                 <p>起動中のモデルがありません。</p>
@@ -378,7 +391,7 @@ function displaySidebarRunningModels(models) {
  * @param {Array} gpus - GPU情報の配列
  */
 function displayGpuInfo(gpus) {
-    if (gpus.length === 0) {
+    if (!gpus || gpus.length === 0) {
         gpuInfo.innerHTML = `
             <div class="no-gpu-message">
                 <p>GPU情報を取得できませんでした。GPUが搭載されていないか、ドライバが正しくインストールされていない可能性があります。</p>
@@ -405,7 +418,7 @@ function displayGpuInfo(gpus) {
             </div>
             <div class="gpu-memory">メモリ使用量: ${memUsed} / ${memTotal} (${memPercent}%)</div>
             <div class="gpu-progress-bar">
-                <div class="gpu-progress" style="width: ${gpu.utilization}%"></div>
+                <div class="gpu-progress" style="width: ${memPercent}%"></div>
             </div>
         `;
         
@@ -419,7 +432,7 @@ function displayGpuInfo(gpus) {
  * @param {Array} gpus - GPU情報の配列
  */
 function displaySidebarGpuInfo(gpus) {
-    if (gpus.length === 0) {
+    if (!gpus || gpus.length === 0) {
         sidebarGpuInfo.innerHTML = `
             <div class="no-gpu-message">
                 <p>GPU情報を取得できませんでした。</p>
@@ -446,7 +459,7 @@ function displaySidebarGpuInfo(gpus) {
             </div>
             <div class="sidebar-gpu-memory">${memUsed} / ${memTotal} (${memPercent}%)</div>
             <div class="sidebar-gpu-progress-bar">
-                <div class="sidebar-gpu-progress" style="width: ${gpu.utilization}%"></div>
+                <div class="sidebar-gpu-progress" style="width: ${memPercent}%"></div>
             </div>
         `;
         
