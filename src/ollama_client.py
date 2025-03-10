@@ -208,32 +208,82 @@ class OllamaClient:
         指定したモデルを終了します。
 
         Args:
-            model_id: 終了するモデルのID
+            model_id: 終了するモデルのID（または名前）
 
         Returns:
             bool: 終了に成功した場合はTrue、失敗した場合はFalse
         """
+        # 起動中のモデル一覧を取得して、IDからモデル名を特定
+        model_name = None
         try:
-            # 直接HTTPリクエストを送信
-            url = f"{self.host}/api/kill"
-            payload = {"id": model_id}
+            running_models = self.list_running_models()
+            for model in running_models:
+                if model.get("id", "").startswith(model_id) or model.get("model", "") == model_id:
+                    model_name = model.get("model", model_id)
+                    break
+        except Exception as e:
+            print(f"起動中のモデル一覧の取得に失敗しました: {e}")
+
+        # モデル名が特定できなかった場合は、IDをそのまま使用
+        if not model_name:
+            model_name = model_id
+            print(f"モデル名が特定できなかったため、ID '{model_id}' をそのまま使用します")
+
+        # APIエンドポイントを試す
+        success = False
+
+        # /api/stop エンドポイントを試す（モデル名を使用）
+        try:
+            url = f"{self.host}/api/stop"
+            payload = {"name": model_name}
+            print(f"モデル終了APIを試行中: {url}, ペイロード: {payload}")
             response = requests.post(url, json=payload)
             response.raise_for_status()
-            return True
+            print(f"モデル終了APIが成功: {url}")
+            success = True
         except Exception as e:
-            print(f"モデルの終了に失敗しました: {e}")
+            print(f"モデル終了API /api/stop (name) の呼び出しに失敗: {e}")
 
-            # 最後の手段として、コマンドラインでモデルを終了
+            # /api/stop エンドポイントを試す（IDを使用）
             try:
-                result = subprocess.run(["ollama", "kill", model_id], capture_output=True, text=True)
-                if result.returncode == 0:
-                    return True
-                else:
-                    print(f"コマンドラインでのモデル終了に失敗しました: {result.stderr}")
-                    return False
+                url = f"{self.host}/api/stop"
+                payload = {"id": model_id}
+                print(f"モデル終了APIを試行中: {url}, ペイロード: {payload}")
+                response = requests.post(url, json=payload)
+                response.raise_for_status()
+                print(f"モデル終了APIが成功: {url}")
+                success = True
             except Exception as e:
-                print(f"コマンドラインでのモデル終了に失敗しました: {e}")
-                return False
+                print(f"モデル終了API /api/stop (id) の呼び出しに失敗: {e}")
+
+        # /api/kill エンドポイントを試す（後方互換性のため）
+        if not success:
+            try:
+                url = f"{self.host}/api/kill"
+                payload = {"id": model_id}
+                print(f"モデル終了APIを試行中: {url}, ペイロード: {payload}")
+                response = requests.post(url, json=payload)
+                response.raise_for_status()
+                print(f"モデル終了APIが成功: {url}")
+                success = True
+            except Exception as e:
+                print(f"モデル終了API /api/kill の呼び出しに失敗: {e}")
+
+        # コマンドラインでの終了を試みる
+        if not success:
+            try:
+                cmd = ["ollama", "stop", model_name]
+                print(f"コマンドラインでのモデル終了を試行中: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0:
+                    print(f"コマンドラインでのモデル終了が成功: {' '.join(cmd)}")
+                    success = True
+                else:
+                    print(f"コマンドラインでのモデル終了に失敗: {result.stderr}")
+            except Exception as e:
+                print(f"コマンドラインでのモデル終了の実行に失敗: {e}")
+
+        return success
 
     def get_gpu_info(self) -> List[Dict[str, Any]]:
         """

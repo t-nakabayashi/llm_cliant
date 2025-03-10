@@ -1,150 +1,196 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ollamaクライアントの直接テスト用スクリプト。
+ollamaサーバーとの直接通信をテストするスクリプト。
 """
 
-import json
-import re
 import requests
-from src.ollama_client import OllamaClient
+import json
+import subprocess
+import platform
+import time
 
 
-def clean_response(response_text):
+def test_list_running_models():
     """
-    レスポンスから<think>タグとその内容を削除します。
-
-    Args:
-        response_text: ollamaからのレスポンステキスト
-
-    Returns:
-        str: クリーニングされたテキスト
+    起動中のモデル一覧を取得するテスト。
     """
-    # <think>タグとその内容を削除
-    if "<think>" in response_text:
-        # <think>と</think>の間の内容を削除
-        response_text = re.sub(r"<think>.*?</think>", "", response_text, flags=re.DOTALL)
-        # 残りの<think>タグを削除
-        response_text = response_text.replace("<think>", "")
-        # 残りの</think>タグを削除
-        response_text = response_text.replace("</think>", "")
-        # 空白行を削除
-        response_text = re.sub(r"\n\s*\n", "\n\n", response_text)
-        # 先頭と末尾の空白を削除
-        response_text = response_text.strip()
+    print("=== 起動中のモデル一覧のテスト ===")
 
-    return response_text
+    # 直接HTTPリクエストを送信
+    try:
+        url = "http://localhost:11434/api/ps"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        print(f"HTTP API応答: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
+        if "processes" in data:
+            processes = data["processes"]
+            if processes:
+                print(f"起動中のモデル数: {len(processes)}")
+                for process in processes:
+                    print(f"モデル: {process.get('model', 'unknown')}, ID: {process.get('id', 'unknown')}")
+            else:
+                print("起動中のモデルはありません。")
+        else:
+            print("応答に 'processes' フィールドがありません。")
+    except Exception as e:
+        print(f"HTTPリクエストでのモデル一覧取得に失敗しました: {e}")
+
+    # コマンドラインでの取得を試みる
+    try:
+        print("\nコマンドラインでの取得を試みます...")
+        result = subprocess.run(["ollama", "ps"], capture_output=True, text=True)
+        print(f"コマンド出力:\n{result.stdout}")
+
+        if result.stderr:
+            print(f"エラー出力:\n{result.stderr}")
+    except Exception as e:
+        print(f"コマンドラインでのモデル一覧取得に失敗しました: {e}")
 
 
-def chat_with_direct_api(model_name, messages, options=None):
+def test_gpu_info():
     """
-    直接HTTPリクエストを使用してチャットを実行します。
-
-    Args:
-        model_name: 使用するモデル名
-        messages: メッセージのリスト
-        options: オプション（省略可）
-
-    Returns:
-        str: 完全なレスポンステキスト
+    GPU情報を取得するテスト。
     """
-    url = "http://localhost:11434/api/chat"
-    payload = {"model": model_name, "messages": messages, "options": options or {}}
+    print("\n=== GPU情報のテスト ===")
 
-    print(f"直接APIリクエスト: {url}, ペイロード: {payload}")
+    system = platform.system()
+    print(f"実行環境: {system}")
 
-    # ストリーミングレスポンスを取得
-    response = requests.post(url, json=payload, stream=True)
-    response.raise_for_status()
+    try:
+        if system == "Windows":
+            # Windowsの場合はnvidia-smiを使用
+            result = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+            )
 
-    # 完全なレスポンステキストを構築
-    full_content = ""
-    all_json_lines = []
+            if result.returncode != 0:
+                print(f"nvidia-smiの実行に失敗しました: {result.stderr}")
+                return
 
-    for line in response.iter_lines():
-        if line:
-            line_str = line.decode("utf-8")
-            print(f"受信ライン: {line_str}")
-            all_json_lines.append(line_str)
+            print("GPU情報:")
+            lines = result.stdout.strip().split("\n")
+            for line in lines:
+                parts = line.split(", ")
+                if len(parts) >= 5:
+                    gpu_index = parts[0]
+                    gpu_name = parts[1]
+                    gpu_util = float(parts[2])
+                    gpu_mem_used = float(parts[3])
+                    gpu_mem_total = float(parts[4])
+                    gpu_mem_percent = (gpu_mem_used / gpu_mem_total) * 100 if gpu_mem_total > 0 else 0
 
-            try:
-                json_obj = json.loads(line_str)
-                if "message" in json_obj and "content" in json_obj["message"]:
-                    content = json_obj["message"]["content"]
-                    full_content += content
+                    print(f"GPU {gpu_index}: {gpu_name}")
+                    print(f"  使用率: {gpu_util}%")
+                    print(f"  メモリ: {gpu_mem_used}MB / {gpu_mem_total}MB ({gpu_mem_percent:.1f}%)")
 
-                    # 完了フラグをチェック
-                    if json_obj.get("done", False):
-                        print("レスポンス完了")
-            except json.JSONDecodeError as e:
-                print(f"JSONデコードエラー: {e}")
+        elif system == "Linux":
+            # Linuxの場合もnvidia-smiを使用
+            result = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+            )
 
-    return full_content, all_json_lines
+            if result.returncode != 0:
+                print(f"nvidia-smiの実行に失敗しました: {result.stderr}")
+                return
+
+            print("GPU情報:")
+            lines = result.stdout.strip().split("\n")
+            for line in lines:
+                parts = line.split(", ")
+                if len(parts) >= 5:
+                    gpu_index = parts[0]
+                    gpu_name = parts[1]
+                    gpu_util = float(parts[2])
+                    gpu_mem_used = float(parts[3])
+                    gpu_mem_total = float(parts[4])
+                    gpu_mem_percent = (gpu_mem_used / gpu_mem_total) * 100 if gpu_mem_total > 0 else 0
+
+                    print(f"GPU {gpu_index}: {gpu_name}")
+                    print(f"  使用率: {gpu_util}%")
+                    print(f"  メモリ: {gpu_mem_used}MB / {gpu_mem_total}MB ({gpu_mem_percent:.1f}%)")
+
+        else:
+            print(f"未対応のOS: {system}")
+
+    except Exception as e:
+        print(f"GPU情報の取得に失敗しました: {e}")
 
 
-def main():
+def test_kill_model():
     """
-    メイン関数。
+    モデルを終了するテスト。
+    注意: このテストは実際にモデルを終了するため、慎重に実行してください。
     """
-    # ollamaクライアントの初期化
-    client = OllamaClient()
+    print("\n=== モデル終了のテスト ===")
+    print("注意: このテストは実際にモデルを終了します。")
 
-    # 利用可能なモデルの一覧を取得
-    models = client.list_models()
-    print(f"利用可能なモデル: {models}")
+    # まず起動中のモデルを取得
+    try:
+        url = "http://localhost:11434/api/ps"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
 
-    if not models:
-        print("利用可能なモデルがありません。ollamaサーバーが起動しているか確認してください。")
-        return
+        if "processes" in data and data["processes"]:
+            processes = data["processes"]
+            print(f"起動中のモデル数: {len(processes)}")
 
-    # 最初のモデルを使用
-    model_name = models[0]["name"]
-    print(f"使用するモデル: {model_name}")
+            # 終了するモデルのIDを入力
+            print("\n起動中のモデル:")
+            for i, process in enumerate(processes):
+                print(f"{i + 1}. モデル: {process.get('model', 'unknown')}, ID: {process.get('id', 'unknown')}")
 
-    # チャットの実行
-    messages = [{"role": "user", "content": "あなたは誰ですか？"}]
+            choice = input("\n終了するモデルの番号を入力してください（終了しない場合は何も入力せずにEnterを押してください）: ")
+            if choice and choice.isdigit():
+                index = int(choice) - 1
+                if 0 <= index < len(processes):
+                    model_id = processes[index]["id"]
 
-    options = {
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "top_k": 40,
-        "num_ctx": 4096,
-        "repeat_penalty": 1.1,
-    }
+                    # モデルを終了
+                    print(f"\nモデル（ID: {model_id}）を終了します...")
+                    kill_url = f"{url.replace('/ps', '/kill')}"
+                    kill_response = requests.post(kill_url, json={"id": model_id})
+                    kill_response.raise_for_status()
 
-    print("\n=== OllamaClient.chat() を使用 ===")
-    print("チャットを実行中...")
-    response = client.chat(
-        model=model_name,
-        messages=messages,
-        options=options,
-    )
+                    print("モデルを終了しました。")
 
-    print("\n--- 生のレスポンス ---")
-    print(json.dumps(response, indent=2, ensure_ascii=False))
-
-    # レスポンスからメッセージを取得
-    assistant_message = response.get("message", {}).get("content", "応答がありませんでした")
-
-    # レスポンスをクリーニング
-    cleaned_message = clean_response(assistant_message)
-
-    print("\n--- クリーニング後のメッセージ ---")
-    print(cleaned_message)
-
-    print("\n=== 直接APIを使用 ===")
-    print("チャットを実行中...")
-    full_content, all_json_lines = chat_with_direct_api(model_name, messages, options)
-
-    print("\n--- 完全なレスポンステキスト ---")
-    print(full_content)
-
-    # レスポンスをクリーニング
-    cleaned_content = clean_response(full_content)
-
-    print("\n--- クリーニング後のメッセージ ---")
-    print(cleaned_content)
+                    # 終了後の状態を確認
+                    time.sleep(1)  # 少し待機
+                    print("\n終了後の状態:")
+                    test_list_running_models()
+                else:
+                    print("無効な番号です。")
+            else:
+                print("モデルの終了をスキップします。")
+        else:
+            print("起動中のモデルがありません。")
+    except Exception as e:
+        print(f"モデル終了のテストに失敗しました: {e}")
 
 
 if __name__ == "__main__":
-    main()
+    test_list_running_models()
+    test_gpu_info()
+
+    # モデル終了のテストは慎重に実行
+    run_kill_test = input("\nモデル終了のテストを実行しますか？（y/N）: ")
+    if run_kill_test.lower() == "y":
+        test_kill_model()
+    else:
+        print("モデル終了のテストをスキップします。")
