@@ -4,7 +4,7 @@ setup(
     name="llm_cliant",
     version="0.1.0",
     description="Ollama-based LLM Chat Web Application",
-    author="t-nakabayashi",
+    author="Tatsuhiko Nakabayashi",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
