@@ -10,28 +10,28 @@
 <body>
     <div class="app-container">
         <!-- モデル選択画面 -->
-        <div class="model-selection-container" id="model-selection">
+        <div class="model-selection-container" id="model-selection" style="display: none;">
             <div class="model-selection-header">
-                <h1>ollama簡易クライアント</h1>
-                <p>使用するモデルを選択してください</p>
+                <h2>モデル選択</h2>
                 <button id="close-model-selection-btn" class="close-btn">&times;</button>
             </div>
             
-            <div class="model-running-info" id="model-running-info">
-                <!-- 起動中のモデル情報がここに表示されます -->
-            </div>
-            
-            <div class="model-list" id="model-list">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                    <p>モデルを読み込み中...</p>
+            <div class="model-selection-content">
+                <div class="model-running-info" id="model-running-info">
+                    <!-- 起動中のモデル情報がここに表示されます -->
                 </div>
-                <!-- モデルリストがここに表示されます -->
-            </div>
-            
-            <div class="model-selection-footer">
-                <p class="model-status" id="model-status">ollamaサーバーに接続中...</p>
-                <button id="back-to-chat-btn" class="back-to-chat-btn" style="display: none;">チャットに戻る</button>
+                
+                <div class="model-list" id="model-list">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>モデルを読み込み中...</p>
+                    </div>
+                    <!-- モデルリストがここに表示されます -->
+                </div>
+                
+                <div class="model-selection-footer">
+                    <p class="model-status" id="model-status">ollamaサーバーに接続中...</p>
+                </div>
             </div>
         </div>
         

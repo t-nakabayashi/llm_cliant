@@ -568,9 +568,8 @@ async function selectModel(modelName) {
             currentModel = modelName;
             currentModelName.textContent = modelName;
             
-            // チャット画面に切り替え
+            // モデル選択画面を閉じる
             modelSelection.style.display = 'none';
-            chatContainer.style.display = 'flex';
             
             // チャットメッセージをクリア
             chatMessages.innerHTML = `
@@ -687,36 +686,25 @@ function updateSettingsUI() {
 function setupEventListeners() {
     // モデル変更ボタンのイベントリスナー
     changeModelBtn.addEventListener('click', () => {
-        chatContainer.style.display = 'none';
         modelSelection.style.display = 'flex';
         fetchModels();
-        
-        // サイドバーの定期更新を停止
-        stopSidebarUpdates();
     });
     
     // モデル選択画面を閉じるボタンのイベントリスナー
     const closeModelSelectionBtn = document.getElementById('close-model-selection-btn');
     closeModelSelectionBtn.addEventListener('click', () => {
         modelSelection.style.display = 'none';
-        chatContainer.style.display = 'flex';
-        
-        // サイドバーの定期更新を開始（モデルが選択されている場合）
-        if (currentModel) {
-            startSidebarUpdates();
-        }
     });
     
-    // チャットに戻るボタンのイベントリスナー
-    backToChatBtn.addEventListener('click', () => {
-        if (currentModel) {
-            modelSelection.style.display = 'none';
-            chatContainer.style.display = 'flex';
-            
-            // サイドバーの定期更新を開始
-            startSidebarUpdates();
-        }
-    });
+    // チャットに戻るボタンのイベントリスナー（不要になったため削除）
+    // backToChatBtn.addEventListener('click', () => {
+    //     if (currentModel) {
+    //         modelSelection.style.display = 'none';
+    //
+    //         // サイドバーの定期更新を開始
+    //         startSidebarUpdates();
+    //     }
+    // });
     
     // モデル管理ボタンのイベントリスナー
     modelManagerBtn.addEventListener('click', () => {

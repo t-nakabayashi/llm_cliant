@@ -28,16 +28,25 @@ body {
 
 /* モデル選択画面 */
 .model-selection-container {
-    width: 100%;
-    max-width: 800px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 700px;
     background-color: #fff;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    overflow: hidden;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+}
+
+.model-selection-content {
     padding: 20px;
-    z-index: 10;
+    overflow-y: auto;
 }
 
 /* 起動中のモデル情報 */
@@ -86,26 +95,18 @@ body {
 }
 
 .model-selection-header {
+    background-color: #4a69bd;
+    color: #fff;
+    padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    position: relative;
 }
 
-.model-selection-header h1, .model-selection-header p {
-    text-align: center;
-    flex: 1;
-}
-
-.model-selection-header h1 {
-    font-size: 1.8rem;
-    color: #4a69bd;
-    margin-bottom: 10px;
-}
-
-.model-selection-header p {
-    color: #6c757d;
+.model-selection-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
 }
 
 .model-list {
@@ -181,7 +182,12 @@ body {
 }
 
 .model-selection-footer {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
 }
 
 .model-status {
