@@ -131,7 +131,9 @@ body {
 
 .model-info {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
 }
 
 .model-name {
@@ -256,10 +258,12 @@ body {
     font-weight: 600;
 }
 
-.model-info {
+.chat-header .model-info {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-direction: row;
+    flex-wrap: nowrap;
 }
 
 .model-name {
@@ -896,6 +900,8 @@ body {
     .model-info {
         width: 100%;
         justify-content: space-between;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
     
     .settings-container, .model-manager-container {
