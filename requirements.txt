@@ -1,5 +1,5 @@
-# Requirements for the Python project
-# Add your project dependencies here.
+# Requirements for LLM Chat Client
+# Dependencies for the Ollama-based chat application
 pytest
 Flask==2.3.3
 Flask-SocketIO==5.3.4
