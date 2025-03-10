@@ -36,8 +36,8 @@ ollamaサーバーを使用したWebアプリケーションです。ブラウ�
 
 ```bash
 # リポジトリのクローン
-git clone https://github.com/t-nakabayashi/llm_cliant.git
-cd llm_cliant
+git clone https://github.com/t-nakabayashi/llm_client.git
+cd llm_client
 
 # 依存パッケージのインストール
 pip install -r requirements.txt
