@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLMチャットアプリ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- モデル選択画面 -->
+        <div class="model-selection-container" id="model-selection">
+            <div class="model-selection-header">
+                <h1>LLMチャットアプリ</h1>
+                <p>使用するモデルを選択してください</p>
+            </div>
+            
+            <div class="model-list" id="model-list">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>モデルを読み込み中...</p>
+                </div>
+                <!-- モデルリストがここに表示されます -->
+            </div>
+            
+            <div class="model-selection-footer">
+                <p class="model-status" id="model-status">ollamaサーバーに接続中...</p>
+            </div>
+        </div>
+        
+        <!-- チャット画面 -->
+        <div class="chat-container" id="chat-container" style="display: none;">
+            <header class="chat-header">
+                <h1>LLMチャットアプリ</h1>
+                <div class="model-info">
+                    <span class="model-name" id="current-model-name">モデル未選択</span>
+                    <button id="change-model-btn" class="change-model-btn">モデル変更</button>
+                    <button id="settings-btn" class="settings-btn">設定</button>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="status-text">準備完了</span>
+                </div>
+            </header>
+            
+            <main class="chat-main">
+                <div class="chat-messages" id="chat-messages">
+                    <!-- チャットメッセージがここに表示されます -->
+                    <div class="message system-message">
+                        <div class="message-content">
+                            こんにちは！メッセージを入力してください。
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <footer class="chat-footer">
+                <form id="chat-form">
+                    <input
+                        id="message-input"
+                        type="text"
+                        placeholder="メッセージを入力..."
+                        autocomplete="off"
+                        required
+                    />
+                    <button type="submit" id="send-button">送信</button>
+                </form>
+            </footer>
+        </div>
+        
+        <!-- 設定画面 -->
+        <div class="settings-container" id="settings-container" style="display: none;">
+            <div class="settings-header">
+                <h2>モデル設定</h2>
+                <button id="close-settings-btn" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3>生成パラメータ</h3>
+                    
+                    <div class="setting-item">
+                        <label for="temperature">Temperature</label>
+                        <div class="setting-control">
+                            <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.7">
+                            <span class="setting-value" id="temperature-value">0.7</span>
+                        </div>
+                        <p class="setting-description">値が高いほど、より創造的で多様な応答になります。低いと決定的な応答になります。</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="top-p">Top P</label>
+                        <div class="setting-control">
+                            <input type="range" id="top-p" min="0" max="1" step="0.05" value="0.9">
+                            <span class="setting-value" id="top-p-value">0.9</span>
+                        </div>
+                        <p class="setting-description">確率の累積分布からトークンをサンプリングする閾値。多様性と品質のバランスを調整します。</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="top-k">Top K</label>
+                        <div class="setting-control">
+                            <input type="range" id="top-k" min="1" max="100" step="1" value="40">
+                            <span class="setting-value" id="top-k-value">40</span>
+                        </div>
+                        <p class="setting-description">各ステップで考慮される最も可能性の高いトークンの数。</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="repeat-penalty">繰り返しペナルティ</label>
+                        <div class="setting-control">
+                            <input type="range" id="repeat-penalty" min="1.0" max="2.0" step="0.05" value="1.1">
+                            <span class="setting-value" id="repeat-penalty-value">1.1</span>
+                        </div>
+                        <p class="setting-description">既に生成されたトークンの繰り返しにペナルティを与えます。高いほど繰り返しが少なくなります。</p>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>コンテキスト設定</h3>
+                    
+                    <div class="setting-item">
+                        <label for="context-length">コンテキスト長</label>
+                        <div class="setting-control">
+                            <input type="range" id="context-length" min="512" max="32768" step="512" value="4096">
+                            <span class="setting-value" id="context-length-value">4096</span>
+                        </div>
+                        <p class="setting-description">モデルが考慮するトークンの最大数。長いほど多くの会話履歴を記憶できますが、処理が遅くなります。</p>
+                    </div>
+                </div>
+                
+                <div class="settings-actions">
+                    <button id="reset-settings-btn">デフォルトに戻す</button>
+                    <button id="save-settings-btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

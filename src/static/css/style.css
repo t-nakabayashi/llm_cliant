@@ -1,0 +1,484 @@
+/* LLMチャットアプリのスタイル定義 */
+
+/* 全体のリセットとベーススタイル */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f5f5;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* アプリコンテナ */
+.app-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+/* モデル選択画面 */
+.model-selection-container {
+    width: 100%;
+    max-width: 800px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 20px;
+    z-index: 10;
+}
+
+.model-selection-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.model-selection-header h1 {
+    font-size: 1.8rem;
+    color: #4a69bd;
+    margin-bottom: 10px;
+}
+
+.model-selection-header p {
+    color: #6c757d;
+}
+
+.model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    min-height: 200px;
+}
+
+.model-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.model-card:hover {
+    background-color: #f8f9fa;
+    border-color: #4a69bd;
+}
+
+.model-card.selected {
+    background-color: #e8f0fe;
+    border-color: #4a69bd;
+}
+
+.model-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.model-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.model-details {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.model-select-btn {
+    padding: 8px 15px;
+    background-color: #4a69bd;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.model-select-btn:hover {
+    background-color: #3c5aa6;
+}
+
+.model-selection-footer {
+    text-align: center;
+}
+
+.model-status {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* ローディングスピナー */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4a69bd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* チャットコンテナ */
+.chat-container {
+    width: 100%;
+    max-width: 800px;
+    height: 90vh;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10;
+}
+
+/* チャットヘッダー */
+.chat-header {
+    background-color: #4a69bd;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.model-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.model-name {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.change-model-btn, .settings-btn {
+    padding: 5px 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s;
+}
+
+.change-model-btn:hover, .settings-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-dot.connected, .status-dot.ready {
+    background-color: #2ecc71;
+}
+
+.status-dot.thinking {
+    background-color: #f39c12;
+}
+
+.status-dot.disconnected, .status-dot.error {
+    background-color: #e74c3c;
+}
+
+.status-text {
+    font-size: 0.9rem;
+}
+
+/* チャットメイン */
+.chat-main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+}
+
+/* メッセージスタイル */
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: #4a69bd;
+    color: #fff;
+}
+
+.assistant-message {
+    align-self: flex-start;
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+.system-message {
+    align-self: center;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    width: 90%;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.message-sender {
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.message-content {
+    line-height: 1.4;
+}
+
+/* チャットフッター */
+.chat-footer {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+#chat-form {
+    display: flex;
+}
+
+#message-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+#chat-form button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: #4a69bd;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+#chat-form button:hover {
+    background-color: #3c5aa6;
+}
+
+#chat-form button:disabled {
+    background-color: #a0aec0;
+    cursor: not-allowed;
+}
+
+/* 設定画面 */
+.settings-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 600px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-header {
+    background-color: #4a69bd;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.settings-content {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.settings-section {
+    margin-bottom: 25px;
+}
+
+.settings-section h3 {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.setting-control input[type="range"] {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.setting-value {
+    min-width: 40px;
+    text-align: right;
+    font-weight: bold;
+    color: #4a69bd;
+}
+
+.setting-description {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.settings-actions button {
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+#reset-settings-btn {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #ced4da;
+}
+
+#reset-settings-btn:hover {
+    background-color: #e9ecef;
+}
+
+#save-settings-btn {
+    background-color: #4a69bd;
+    color: #fff;
+    border: none;
+}
+
+#save-settings-btn:hover {
+    background-color: #3c5aa6;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+    .chat-container, .model-selection-container {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+    }
+    
+    .message {
+        max-width: 90%;
+    }
+    
+    .chat-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .model-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .settings-container {
+        width: 95%;
+        max-height: 95vh;
+    }
+}
