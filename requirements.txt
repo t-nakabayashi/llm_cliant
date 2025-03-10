@@ -1,7 +1,3 @@
 # Requirements for LLM Chat Client
-# Dependencies for the Ollama-based chat application
-pytest
-Flask==2.3.3
-Flask-SocketIO==5.3.4
-ollama-python==0.1.2
-python-socketio==5.8.0
+# Install all dependencies including development and test tools
+-e .[test,dev]
