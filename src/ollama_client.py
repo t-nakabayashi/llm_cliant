@@ -158,9 +158,22 @@ class OllamaClient:
             response.raise_for_status()
             data = response.json()
 
+            print(f"起動中のモデル一覧の応答: {data}")
+
             # レスポンスの形式を確認
             if "processes" in data:
                 return data["processes"]
+            elif "models" in data:
+                # 新しいAPIの形式に対応
+                models = data["models"]
+                # モデル情報を標準化
+                return [
+                    {
+                        "id": model.get("digest", "")[:12],  # digestの先頭12文字をIDとして使用
+                        "model": model.get("name", "unknown"),
+                    }
+                    for model in models
+                ]
             elif isinstance(data, list):
                 return data
             else:
@@ -182,8 +195,8 @@ class OllamaClient:
                     for line in lines[1:]:
                         parts = line.split()
                         if len(parts) >= 2:
-                            model_id = parts[0]
-                            model_name = parts[1]
+                            model_name = parts[0]
+                            model_id = parts[1]
                             models.append({"id": model_id, "model": model_name})
                 return models
             except Exception as e:
