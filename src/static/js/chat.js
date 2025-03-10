@@ -31,6 +31,8 @@ const statusText = document.getElementById('status-text');
 const statusDot = document.querySelector('.status-dot');
 
 // サイドバー要素
+const chatSidebar = document.querySelector('.chat-sidebar');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 const sidebarRunningModels = document.getElementById('sidebar-running-models');
 const sidebarGpuInfo = document.getElementById('sidebar-gpu-info');
 
@@ -43,6 +45,7 @@ const topKSlider = document.getElementById('top-k');
 const topKValue = document.getElementById('top-k-value');
 const contextLengthSlider = document.getElementById('context-length');
 const contextLengthValue = document.getElementById('context-length-value');
+const vramUsageValue = document.getElementById('vram-usage-value');
 const repeatPenaltySlider = document.getElementById('repeat-penalty');
 const repeatPenaltyValue = document.getElementById('repeat-penalty-value');
 const resetSettingsBtn = document.getElementById('reset-settings-btn');
@@ -50,6 +53,7 @@ const saveSettingsBtn = document.getElementById('save-settings-btn');
 
 // アプリケーションの状態
 let currentModel = null;
+let currentModelSize = 0; // モデルサイズ（バイト単位）
 let isProcessing = false;
 let modelParams = {
     temperature: 0.7,
@@ -583,6 +587,15 @@ async function selectModel(modelName) {
             // モデル情報があれば表示
             if (data.model_info) {
                 console.log('モデル情報:', data.model_info);
+                
+                // モデルサイズを保存（利用可能な場合）
+                const models = await (await fetch('/api/models')).json();
+                const selectedModel = models.models.find(m => m.name === modelName);
+                if (selectedModel && selectedModel.size) {
+                    currentModelSize = selectedModel.size;
+                    // VRAM使用量の表示を更新
+                    updateVramUsage(modelParams.context_length);
+                }
             }
             
             // 接続状態を更新
@@ -678,6 +691,34 @@ function updateSettingsUI() {
     
     repeatPenaltySlider.value = modelParams.repeat_penalty;
     repeatPenaltyValue.textContent = modelParams.repeat_penalty;
+    
+    // VRAM使用量を更新
+    updateVramUsage(modelParams.context_length);
+}
+
+/**
+ * VRAM使用量を計算して表示する関数
+ *
+ * @param {number} contextLength - コンテキスト長
+ */
+function updateVramUsage(contextLength) {
+    if (!currentModelSize) {
+        vramUsageValue.textContent = '不明（モデルを選択してください）';
+        return;
+    }
+    
+    // モデルサイズとコンテキスト長からVRAM使用量を推定
+    // 簡易的な計算式: モデルサイズ + (コンテキスト長 * 推定トークンサイズ)
+    // トークンあたり約12バイトと仮定
+    const tokenSizeBytes = 12;
+    const baseModelSizeGB = currentModelSize / (1024 * 1024 * 1024);
+    const contextSizeGB = (contextLength * tokenSizeBytes) / (1024 * 1024 * 1024);
+    
+    // 合計VRAM使用量（オーバーヘッドを考慮して20%増し）
+    const totalVramGB = (baseModelSizeGB + contextSizeGB) * 1.2;
+    
+    // 表示を更新
+    vramUsageValue.textContent = `約 ${totalVramGB.toFixed(2)} GB`;
 }
 
 /**
@@ -694,6 +735,19 @@ function setupEventListeners() {
     const closeModelSelectionBtn = document.getElementById('close-model-selection-btn');
     closeModelSelectionBtn.addEventListener('click', () => {
         modelSelection.style.display = 'none';
+    });
+    
+    // サイドバー折りたたみボタンのイベントリスナー
+    sidebarToggleBtn.addEventListener('click', () => {
+        chatSidebar.classList.toggle('collapsed');
+        const toggleIcon = sidebarToggleBtn.querySelector('.toggle-icon');
+        if (chatSidebar.classList.contains('collapsed')) {
+            toggleIcon.textContent = '◀';
+            toggleIcon.style.transform = 'rotate(0deg)';
+        } else {
+            toggleIcon.textContent = '▶';
+            toggleIcon.style.transform = 'rotate(180deg)';
+        }
     });
     
     // チャットに戻るボタンのイベントリスナー（不要になったため削除）
@@ -772,6 +826,9 @@ function setupEventListeners() {
         const value = parseInt(contextLengthSlider.value);
         contextLengthValue.textContent = value;
         modelParams.context_length = value;
+        
+        // VRAM使用量を計算して表示
+        updateVramUsage(value);
     });
     
     repeatPenaltySlider.addEventListener('input', () => {

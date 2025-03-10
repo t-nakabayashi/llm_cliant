@@ -64,7 +64,12 @@
                 </main>
                 
                 <!-- サイドバー -->
-                <aside class="chat-sidebar">
+                <div class="sidebar-toggle-container">
+                    <button id="sidebar-toggle-btn" class="sidebar-toggle-btn">
+                        <span class="toggle-icon">▶</span>
+                    </button>
+                </div>
+                <aside class="chat-sidebar collapsed">
                     <div class="sidebar-section">
                         <h3>起動中のモデル</h3>
                         <div id="sidebar-running-models">
@@ -157,6 +162,10 @@
                         <div class="setting-control">
                             <input type="range" id="context-length" min="512" max="32768" step="512" value="4096">
                             <span class="setting-value" id="context-length-value">4096</span>
+                        </div>
+                        <div class="vram-usage">
+                            <span>予測VRAM使用量: </span>
+                            <span id="vram-usage-value">計算中...</span>
                         </div>
                         <p class="setting-description">モデルが考慮するトークンの最大数。長いほど多くの会話履歴を記憶できますが、処理が遅くなります。</p>
                     </div>

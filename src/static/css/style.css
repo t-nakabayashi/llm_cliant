@@ -333,6 +333,7 @@ body {
     display: flex;
     flex: 1;
     overflow: hidden;
+    position: relative;
 }
 
 /* チャットメイン */
@@ -347,6 +348,35 @@ body {
     flex-direction: column;
 }
 
+/* サイドバートグルボタン */
+.sidebar-toggle-container {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 15;
+}
+
+.sidebar-toggle-btn {
+    background-color: #4a69bd;
+    color: white;
+    border: none;
+    border-radius: 4px 0 0 4px;
+    padding: 10px 5px;
+    cursor: pointer;
+    font-size: 12px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #3c5aa6;
+}
+
+.toggle-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
 /* サイドバー */
 .chat-sidebar {
     width: 300px;
@@ -354,6 +384,14 @@ body {
     border-left: 1px solid #e9ecef;
     padding: 15px;
     overflow-y: auto;
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.chat-sidebar.collapsed {
+    transform: translateX(300px);
+    width: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 .sidebar-section {
@@ -665,6 +703,17 @@ body {
     font-size: 0.8rem;
     color: #6c757d;
     margin-top: 5px;
+}
+
+.vram-usage {
+    font-size: 0.9rem;
+    color: #4a69bd;
+    margin-top: 8px;
+    font-weight: bold;
+    background-color: #f0f4ff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border-left: 3px solid #4a69bd;
 }
 
 .settings-actions {
