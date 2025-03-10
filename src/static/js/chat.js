@@ -707,18 +707,89 @@ function updateVramUsage(contextLength) {
         return;
     }
     
-    // モデルサイズとコンテキスト長からVRAM使用量を推定
-    // 簡易的な計算式: モデルサイズ + (コンテキスト長 * 推定トークンサイズ)
-    // トークンあたり約12バイトと仮定
-    const tokenSizeBytes = 12;
-    const baseModelSizeGB = currentModelSize / (1024 * 1024 * 1024);
-    const contextSizeGB = (contextLength * tokenSizeBytes) / (1024 * 1024 * 1024);
+    // モデルサイズからモデルのアーキテクチャを推測
+    const modelArchitecture = estimateModelArchitecture(currentModelSize);
     
-    // 合計VRAM使用量（オーバーヘッドを考慮して20%増し）
-    const totalVramGB = (baseModelSizeGB + contextSizeGB) * 1.2;
+    // モデルサイズとコンテキスト長からVRAM使用量を推定（改良版）
+    const baseModelSizeGB = currentModelSize / (1024 * 1024 * 1024);
+    
+    // KVキャッシュサイズの計算
+    // KVキャッシュは、コンテキスト長 × レイヤー数 × 隠れ層の次元数 × 2 に比例
+    const layerCount = modelArchitecture.layers;
+    const hiddenSize = modelArchitecture.hiddenSize;
+    const bytesPerToken = modelArchitecture.bytesPerToken;
+    
+    // KVキャッシュサイズ（GB）
+    const kvCacheSizeGB = (contextLength * layerCount * hiddenSize * 2 * 4) / (1024 * 1024 * 1024);
+    
+    // アクティベーションサイズ（GB）- 推論時は通常小さい
+    const activationSizeGB = (hiddenSize * 4) / (1024 * 1024 * 1024);
+    
+    // 合計VRAM使用量（オーバーヘッドを考慮して10%増し）
+    const totalVramGB = (baseModelSizeGB + kvCacheSizeGB + activationSizeGB) * 1.1;
+    
+    // VRAM使用率の計算（GPUのVRAMが16GBと仮定）
+    const assumedGpuVramGB = 16;
+    const vramUsagePercent = (totalVramGB / assumedGpuVramGB) * 100;
     
     // 表示を更新
-    vramUsageValue.textContent = `約 ${totalVramGB.toFixed(2)} GB`;
+    vramUsageValue.textContent = `約 ${totalVramGB.toFixed(2)} GB (${vramUsagePercent.toFixed(1)}%)`;
+    
+    // VRAM使用率に応じて色を変更
+    if (vramUsagePercent > 90) {
+        vramUsageValue.style.color = '#e74c3c'; // 赤色（危険）
+    } else if (vramUsagePercent > 70) {
+        vramUsageValue.style.color = '#f39c12'; // オレンジ色（警告）
+    } else {
+        vramUsageValue.style.color = '#2ecc71'; // 緑色（安全）
+    }
+}
+
+/**
+ * モデルサイズからモデルのアーキテクチャを推測する関数
+ *
+ * @param {number} modelSizeBytes - モデルサイズ（バイト）
+ * @returns {Object} モデルアーキテクチャの推定値
+ */
+function estimateModelArchitecture(modelSizeBytes) {
+    // モデルサイズ（GB）
+    const modelSizeGB = modelSizeBytes / (1024 * 1024 * 1024);
+    
+    // モデルサイズに基づいてアーキテクチャを推定
+    let layers, hiddenSize, bytesPerToken;
+    
+    if (modelSizeGB < 2) {
+        // 小型モデル（1B以下）
+        layers = 24;
+        hiddenSize = 1024;
+        bytesPerToken = 8;
+    } else if (modelSizeGB < 5) {
+        // 中型モデル（3B程度）
+        layers = 32;
+        hiddenSize = 2048;
+        bytesPerToken = 10;
+    } else if (modelSizeGB < 10) {
+        // 大型モデル（7B程度）
+        layers = 32;
+        hiddenSize = 4096;
+        bytesPerToken = 12;
+    } else if (modelSizeGB < 20) {
+        // 超大型モデル（13B程度）
+        layers = 40;
+        hiddenSize = 5120;
+        bytesPerToken = 14;
+    } else {
+        // 巨大モデル（30B以上）
+        layers = 60;
+        hiddenSize = 6656;
+        bytesPerToken = 16;
+    }
+    
+    return {
+        layers,
+        hiddenSize,
+        bytesPerToken
+    };
 }
 
 /**
