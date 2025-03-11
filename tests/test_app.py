@@ -6,7 +6,7 @@ Flaskアプリケーションのテストモジュール。
 
 import pytest
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from src.app import app
 
 

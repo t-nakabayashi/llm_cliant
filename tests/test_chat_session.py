@@ -4,7 +4,6 @@
 ChatSessionクラスのテストモジュール。
 """
 
-import pytest
 from src.chat_session import ChatSession
 
 

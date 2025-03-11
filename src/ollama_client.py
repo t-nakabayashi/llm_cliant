@@ -7,7 +7,6 @@ ollamaサーバーとの通信を担当するモジュール。
 モデルの一覧取得やチャット実行などの機能を提供します。
 """
 
-import os
 import json
 import requests
 import re
@@ -136,7 +135,7 @@ class OllamaClient:
                                     size = int(size_val * 1024 * 1024 * 1024)
                                 elif size_unit == "MB":
                                     size = int(size_val * 1024 * 1024)
-                            except:
+                            except Exception:
                                 pass
                             models.append({"name": name, "size": size})
                 return models

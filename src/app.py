@@ -8,7 +8,6 @@ LLMチャットWebアプリケーションのメインモジュール。
 """
 
 import os
-import json
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO
 from src.chat_session import ChatSession
@@ -264,7 +263,7 @@ def main():
         debug = os.environ.get("DEBUG", "False").lower() == "true"
 
         # 起動メッセージ
-        print(f"ollama簡易クライアントを起動しています...")
+        print("ollama簡易クライアントを起動しています...")
         print(f"サーバーアドレス: http://{host}:{port}")
         print(f"ollamaサーバー: {ollama_host}")
 

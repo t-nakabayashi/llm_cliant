@@ -4,9 +4,6 @@
 メインモジュールのテスト。
 """
 
-import pytest
-from unittest.mock import patch
-import sys
 from src.main import run
 
 
