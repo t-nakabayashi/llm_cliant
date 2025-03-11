@@ -11,7 +11,7 @@ setup(
     install_requires=[
         "Flask>=2.3.3,<3.0.0",
         "Flask-SocketIO>=5.3.4,<6.0.0",
-        "ollama-python==0.1.2",  # バージョンを固定
+        "ollama>=0.1.3,<0.2.0",  # ollama-pythonから名前が変更
         "python-socketio>=5.8.0,<6.0.0",
         "requests>=2.31.0,<3.0.0",  # requestsの依存関係を明示
     ],

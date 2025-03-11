@@ -5,13 +5,30 @@ OllamaClientクラスのテストモジュール。
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+import json
+from unittest.mock import patch, MagicMock, call
 from src.ollama_client import OllamaClient
 
-# ollamaモジュールをモック
-ollama_mock = MagicMock()
 # src.ollama_client内のollamaをモック
 patch_path = "src.ollama_client.ollama"
+
+
+# ollamaモジュールをモック
+class MockOllama:
+    def __init__(self):
+        self.host = None
+
+    def list(self):
+        return {"models": []}
+
+    def chat(self, **kwargs):
+        return {"message": {"role": "assistant", "content": "This is a mock response"}}
+
+    def show(self, model_name):
+        return {}
+
+
+ollama_mock = MagicMock(spec=MockOllama)
 
 
 @pytest.fixture
@@ -56,16 +73,22 @@ def test_list_models_success(mock_ollama, ollama_client):
 
 
 @patch(patch_path)
-def test_list_models_error(mock_ollama, ollama_client):
+@patch("src.ollama_client.requests.get")
+@patch("src.ollama_client.subprocess.run")
+def test_list_models_error(mock_run, mock_get, mock_ollama, ollama_client):
     """
     list_modelsメソッドがエラーを発生させた場合のテスト。
 
     Args:
+        mock_run: subprocessのrunメソッドのモック
+        mock_get: requestsのgetメソッドのモック
         mock_ollama: ollamaモジュールのモック
         ollama_client: OllamaClientインスタンス
     """
     # モックの設定
     mock_ollama.list.side_effect = Exception("Connection error")
+    mock_get.side_effect = Exception("HTTP error")
+    mock_run.side_effect = Exception("Command error")
 
     # テスト実行
     result = ollama_client.list_models()
@@ -73,20 +96,33 @@ def test_list_models_error(mock_ollama, ollama_client):
     # 検証
     assert result == []
     mock_ollama.list.assert_called_once()
+    mock_get.assert_called_once()
+    mock_run.assert_called_once()
 
 
 @patch(patch_path)
-def test_chat_success(mock_ollama, ollama_client):
+@patch("src.ollama_client.requests.post")
+def test_chat_success(mock_post, mock_ollama, ollama_client):
     """
     chatメソッドが成功した場合のテスト。
 
     Args:
+        mock_post: requestsのpostメソッドのモック
         mock_ollama: ollamaモジュールのモック
         ollama_client: OllamaClientインスタンス
     """
     # モックの設定
     mock_response = {"message": {"role": "assistant", "content": "こんにちは、何かお手伝いできますか？"}}
     mock_ollama.chat.return_value = mock_response
+
+    # HTTPレスポンスのモック
+    mock_post_response = MagicMock()
+    mock_post_response.raise_for_status.return_value = None
+    mock_post_response.iter_lines.return_value = [
+        json.dumps({"message": {"content": "こんにちは、", "role": "assistant"}}).encode("utf-8"),
+        json.dumps({"message": {"content": "何かお手伝いできますか？", "role": "assistant"}, "done": True}).encode("utf-8"),
+    ]
+    mock_post.return_value = mock_post_response
 
     # テスト用のパラメータ
     model = "llama2"
@@ -96,22 +132,34 @@ def test_chat_success(mock_ollama, ollama_client):
     result = ollama_client.chat(model, messages)
 
     # 検証
-    assert result == mock_response
-    mock_ollama.chat.assert_called_once_with(model=model, messages=messages, context=None, options={})
+    assert result["message"]["content"] == "こんにちは、何かお手伝いできますか？"
+    assert result["message"]["role"] == "assistant"
+    mock_post.assert_called_once()
 
 
 @patch(patch_path)
-def test_chat_with_options(mock_ollama, ollama_client):
+@patch("src.ollama_client.requests.post")
+def test_chat_with_options(mock_post, mock_ollama, ollama_client):
     """
     chatメソッドがオプション付きで呼び出された場合のテスト。
 
     Args:
+        mock_post: requestsのpostメソッドのモック
         mock_ollama: ollamaモジュールのモック
         ollama_client: OllamaClientインスタンス
     """
     # モックの設定
     mock_response = {"message": {"role": "assistant", "content": "こんにちは、何かお手伝いできますか？"}}
     mock_ollama.chat.return_value = mock_response
+
+    # HTTPレスポンスのモック
+    mock_post_response = MagicMock()
+    mock_post_response.raise_for_status.return_value = None
+    mock_post_response.iter_lines.return_value = [
+        json.dumps({"message": {"content": "こんにちは、", "role": "assistant"}}).encode("utf-8"),
+        json.dumps({"message": {"content": "何かお手伝いできますか？", "role": "assistant"}, "done": True}).encode("utf-8"),
+    ]
+    mock_post.return_value = mock_post_response
 
     # テスト用のパラメータ
     model = "llama2"
@@ -122,22 +170,30 @@ def test_chat_with_options(mock_ollama, ollama_client):
     result = ollama_client.chat(model, messages, options=options)
 
     # 検証
-    assert result == mock_response
-    mock_ollama.chat.assert_called_once_with(model=model, messages=messages, context=None, options=options)
+    assert result["message"]["content"] == "こんにちは、何かお手伝いできますか？"
+    assert result["message"]["role"] == "assistant"
+    mock_post.assert_called_once()
+    # オプションが正しく渡されていることを確認
+    assert mock_post.call_args[1]["json"]["options"] == options
 
 
 @patch(patch_path)
-def test_chat_error(mock_ollama, ollama_client):
+@patch("src.ollama_client.requests.post")
+def test_chat_error(mock_post, mock_ollama, ollama_client):
     """
     chatメソッドがエラーを発生させた場合のテスト。
 
     Args:
+        mock_post: requestsのpostメソッドのモック
         mock_ollama: ollamaモジュールのモック
         ollama_client: OllamaClientインスタンス
     """
     # モックの設定
     error_message = "Model not found"
     mock_ollama.chat.side_effect = Exception(error_message)
+
+    # HTTPリクエストのモック
+    mock_post.side_effect = Exception(error_message)
 
     # テスト用のパラメータ
     model = "unknown-model"
@@ -149,7 +205,7 @@ def test_chat_error(mock_ollama, ollama_client):
     # 検証
     assert "エラーが発生しました" in result["message"]["content"]
     assert error_message in result["message"]["content"]
-    mock_ollama.chat.assert_called_once()
+    mock_post.assert_called_once()
 
 
 @patch(patch_path)
@@ -242,38 +298,51 @@ def test_list_running_models_error(mock_get, ollama_client):
     mock_get.assert_called_once_with("http://localhost:11434/api/ps")
 
 
+@patch("src.ollama_client.requests.get")
 @patch("src.ollama_client.requests.post")
-def test_kill_model_success(mock_post, ollama_client):
+def test_kill_model_success(mock_post, mock_get, ollama_client):
     """
     kill_modelメソッドが成功した場合のテスト。
 
     Args:
         mock_post: requestsのpostメソッドのモック
+        mock_get: requestsのgetメソッドのモック
         ollama_client: OllamaClientインスタンス
     """
-    # モックの設定
-    mock_response = MagicMock()
-    mock_response.raise_for_status.return_value = None
-    mock_post.return_value = mock_response
+    # list_running_modelsのモック設定
+    mock_get_response = MagicMock()
+    mock_get_response.raise_for_status.return_value = None
+    mock_get_response.json.return_value = {"processes": [{"id": "abc123", "model": "llama2"}]}
+    mock_get.return_value = mock_get_response
+
+    # kill_modelのモック設定
+    mock_post_response = MagicMock()
+    mock_post_response.raise_for_status.return_value = None
+    mock_post.return_value = mock_post_response
 
     # テスト実行
     result = ollama_client.kill_model("abc123")
 
     # 検証
     assert result is True
-    mock_post.assert_called_once_with("http://localhost:11434/api/kill", json={"id": "abc123"})
+    assert mock_post.call_args_list[0] == call("http://localhost:11434/api/stop", json={"name": "llama2"})
 
 
+@patch("src.ollama_client.requests.get")
 @patch("src.ollama_client.requests.post")
-def test_kill_model_error(mock_post, ollama_client):
+def test_kill_model_error(mock_post, mock_get, ollama_client):
     """
     kill_modelメソッドがエラーを発生させた場合のテスト。
 
     Args:
         mock_post: requestsのpostメソッドのモック
+        mock_get: requestsのgetメソッドのモック
         ollama_client: OllamaClientインスタンス
     """
-    # モックの設定
+    # list_running_modelsのモック設定
+    mock_get.side_effect = Exception("Connection error")
+
+    # kill_modelのモック設定
     mock_post.side_effect = Exception("Connection error")
 
     # テスト実行
@@ -281,7 +350,13 @@ def test_kill_model_error(mock_post, ollama_client):
 
     # 検証
     assert result is False
-    mock_post.assert_called_once_with("http://localhost:11434/api/kill", json={"id": "abc123"})
+    # すべてのAPIコールが失敗することを確認
+    assert mock_post.call_count == 3
+    assert mock_post.call_args_list == [
+        call("http://localhost:11434/api/stop", json={"name": "abc123"}),
+        call("http://localhost:11434/api/stop", json={"id": "abc123"}),
+        call("http://localhost:11434/api/kill", json={"id": "abc123"}),
+    ]
 
 
 @patch("src.ollama_client.platform.system")
